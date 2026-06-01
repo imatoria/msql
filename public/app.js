@@ -7,8 +7,26 @@ let state = {
   searchText: '',
   dbConfigured: false,
   connections: [],
-  activeConnectionId: null
+  activeConnectionId: null,
+  formatSettings: {
+    keywordCase: 'upper',
+    dataTypeCase: 'upper',
+    functionCase: 'upper',
+    indentStyle: '2-spaces',
+    indentStyleParam: 'standard', // 'standard' or 'tabularLeft'
+    logicalOperatorNewline: 'before', // 'before' or 'after'
+    linesBetweenQueries: 2,
+    expressionWidth: 50
+  }
 };
+
+// Load format settings from localStorage if they exist
+try {
+  const savedFmt = localStorage.getItem('mSql_format_settings');
+  if (savedFmt) {
+    state.formatSettings = { ...state.formatSettings, ...JSON.parse(savedFmt) };
+  }
+} catch (e) {}
 
 // Mock Schemas for Running Queries Simulation
 const MOCK_DATASETS = {
@@ -71,6 +89,18 @@ const elements = {
   btnSave: document.getElementById('btn-save'),
   btnDelete: document.getElementById('btn-delete'),
   btnFormat: document.getElementById('btn-format'),
+  btnFormatSettings: document.getElementById('btn-format-settings'),
+  formatSettingsPopup: document.getElementById('format-settings-popup'),
+  btnSaveFormatSettings: document.getElementById('btn-save-format-settings'),
+  btnCloseFormatSettings: document.getElementById('btn-close-format-settings'),
+  fmtKeywordCase: document.getElementById('fmt-keyword-case'),
+  fmtDataTypeCase: document.getElementById('fmt-datatype-case'),
+  fmtFunctionCase: document.getElementById('fmt-function-case'),
+  fmtIndent: document.getElementById('fmt-indent'),
+  fmtIndentStyle: document.getElementById('fmt-indent-style'),
+  fmtOperatorNewline: document.getElementById('fmt-operator-newline'),
+  fmtLinesBetween: document.getElementById('fmt-lines-between'),
+  fmtExprWidth: document.getElementById('fmt-expr-width'),
   btnRun: document.getElementById('btn-run'),
   sqlTextarea: document.getElementById('sql-textarea'),
   lineNumbers: document.getElementById('editor-line-numbers'),
@@ -133,7 +163,21 @@ function setupEventListeners() {
   elements.btnSave.addEventListener('click', saveActiveQuery);
   elements.btnDelete.addEventListener('click', deleteActiveQuery);
   elements.btnFormat.addEventListener('click', formatActiveQuery);
+  elements.btnFormatSettings.addEventListener('click', toggleFormatSettingsPopup);
+  elements.btnSaveFormatSettings.addEventListener('click', saveFormatSettings);
   elements.btnRun.addEventListener('click', executeActiveQuery);
+  elements.btnCloseFormatSettings.addEventListener('click', () => {
+    elements.formatSettingsPopup.classList.add('hidden');
+  });
+  
+  // Close format settings popup when clicking outside
+  document.addEventListener('click', (e) => {
+    if (elements.formatSettingsPopup && !elements.formatSettingsPopup.classList.contains('hidden')) {
+      if (!elements.formatSettingsPopup.contains(e.target) && !elements.btnFormatSettings.contains(e.target)) {
+        elements.formatSettingsPopup.classList.add('hidden');
+      }
+    }
+  });
   
   // Settings Modal Listeners
   elements.btnSettingsToggle.addEventListener('click', openSettingsModal);
@@ -917,7 +961,18 @@ async function formatActiveQuery() {
     const response = await fetch('/api/queries/format', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ sql, type: dbType })
+      body: JSON.stringify({
+        sql,
+        type: dbType,
+        keywordCase: state.formatSettings.keywordCase,
+        dataTypeCase: state.formatSettings.dataTypeCase,
+        functionCase: state.formatSettings.functionCase,
+        indentStyle: state.formatSettings.indentStyle,
+        indentStyleParam: state.formatSettings.indentStyleParam,
+        logicalOperatorNewline: state.formatSettings.logicalOperatorNewline,
+        linesBetweenQueries: state.formatSettings.linesBetweenQueries,
+        expressionWidth: state.formatSettings.expressionWidth
+      })
     });
     
     if (!response.ok) {
@@ -962,6 +1017,43 @@ async function formatActiveQuery() {
     elements.btnFormat.disabled = false;
     elements.sqlTextarea.focus();
   }
+}
+
+// Toggle Formatting Settings Popup
+function toggleFormatSettingsPopup(e) {
+  e.stopPropagation();
+  elements.formatSettingsPopup.classList.toggle('hidden');
+  
+  // Populate form with current settings
+  if (!elements.formatSettingsPopup.classList.contains('hidden')) {
+    elements.fmtKeywordCase.value = state.formatSettings.keywordCase || 'preserve';
+    elements.fmtDataTypeCase.value = state.formatSettings.dataTypeCase || 'preserve';
+    elements.fmtFunctionCase.value = state.formatSettings.functionCase || 'preserve';
+    elements.fmtIndent.value = state.formatSettings.indentStyle || '2-spaces';
+    elements.fmtIndentStyle.value = state.formatSettings.indentStyleParam || 'standard';
+    elements.fmtOperatorNewline.value = state.formatSettings.logicalOperatorNewline || 'before';
+    elements.fmtLinesBetween.value = typeof state.formatSettings.linesBetweenQueries !== 'undefined' ? state.formatSettings.linesBetweenQueries : 2;
+    elements.fmtExprWidth.value = typeof state.formatSettings.expressionWidth !== 'undefined' ? state.formatSettings.expressionWidth : 50;
+  }
+}
+
+// Save Formatting Settings
+function saveFormatSettings() {
+  state.formatSettings.keywordCase = elements.fmtKeywordCase.value;
+  state.formatSettings.dataTypeCase = elements.fmtDataTypeCase.value;
+  state.formatSettings.functionCase = elements.fmtFunctionCase.value;
+  state.formatSettings.indentStyle = elements.fmtIndent.value;
+  state.formatSettings.indentStyleParam = elements.fmtIndentStyle.value;
+  state.formatSettings.logicalOperatorNewline = elements.fmtOperatorNewline.value;
+  state.formatSettings.linesBetweenQueries = parseInt(elements.fmtLinesBetween.value, 10) || 2;
+  state.formatSettings.expressionWidth = parseInt(elements.fmtExprWidth.value, 10) || 50;
+  
+  try {
+    localStorage.setItem('mSql_format_settings', JSON.stringify(state.formatSettings));
+  } catch (e) {}
+  
+  elements.formatSettingsPopup.classList.add('hidden');
+  showToast('Formatting options applied');
 }
 
 // Execute SQL Query (Determines Mock or Live Database Mode)

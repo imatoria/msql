@@ -688,8 +688,21 @@ function applySqlLimit(sql, limit, type) {
 }
 
 // API: Format SQL Query using sql-formatter library
+// API: Format SQL Query using sql-formatter library
 app.post('/api/queries/format', (req, res) => {
-  const { sql, type } = req.body;
+  const { 
+    sql, 
+    type, 
+    keywordCase, 
+    dataTypeCase, 
+    functionCase, 
+    indentStyle,
+    indentStyleParam,
+    logicalOperatorNewline,
+    linesBetweenQueries,
+    expressionWidth
+  } = req.body;
+  
   if (!sql) {
     return res.status(400).json({ error: 'SQL query body is required' });
   }
@@ -707,11 +720,26 @@ app.post('/api/queries/format', (req, res) => {
       language = 'mysql';
     }
     
+    // Configure indentation options
+    let tabWidth = 2;
+    let useTabs = false;
+    if (indentStyle === '4-spaces') {
+      tabWidth = 4;
+    } else if (indentStyle === 'tabs') {
+      useTabs = true;
+    }
+    
     const formatted = format(sql, {
       language: language,
-      tabWidth: 2,
-      keywordCase: 'upper',
-      linesBetweenQueries: 2
+      tabWidth: tabWidth,
+      useTabs: useTabs,
+      keywordCase: keywordCase || 'preserve',
+      dataTypeCase: dataTypeCase || 'preserve',
+      functionCase: functionCase || 'preserve',
+      indentStyle: indentStyleParam || 'standard',
+      logicalOperatorNewline: logicalOperatorNewline || 'before',
+      linesBetweenQueries: typeof linesBetweenQueries !== 'undefined' ? parseInt(linesBetweenQueries, 10) || 2 : 2,
+      expressionWidth: typeof expressionWidth !== 'undefined' ? parseInt(expressionWidth, 10) || 50 : 50
     });
     
     res.json({ formatted });

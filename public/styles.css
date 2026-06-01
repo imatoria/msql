@@ -630,8 +630,10 @@ body {
   -webkit-backdrop-filter: none;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
+  overflow: visible;
   min-height: 200px;
+  position: relative;
+  z-index: 15;
 }
 
 .editor-toolbar {
@@ -641,6 +643,7 @@ body {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  position: relative;
 }
 
 .file-name-indicator {
@@ -1552,5 +1555,181 @@ body {
   height: 13px;
   stroke-width: 2.5;
 }
+
+/* --- Segmented Format Control --- */
+.format-segmented {
+  display: flex;
+  background: var(--bg-input);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 2px;
+  gap: 2px;
+  height: 28px;
+  box-sizing: border-box;
+}
+
+.format-btn, .format-btn-settings {
+  background: transparent;
+  border: none;
+  color: var(--color-text-dim);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--transition-fast);
+  height: 22px;
+  font-family: var(--font-sans);
+}
+
+.format-btn {
+  padding: 0 8px;
+  gap: 4px;
+  font-size: 0.76rem;
+  font-weight: 600;
+  border-radius: calc(var(--radius-sm) - 1px) 0 0 calc(var(--radius-sm) - 1px);
+}
+
+.format-btn-settings {
+  padding: 0 6px;
+  border-radius: 0 calc(var(--radius-sm) - 1px) calc(var(--radius-sm) - 1px) 0;
+  border-left: 1px solid var(--border-color);
+}
+
+.format-btn:hover, .format-btn-settings:hover {
+  color: var(--color-primary);
+  background: rgba(0, 0, 0, 0.04);
+}
+
+.format-btn svg, .format-btn-settings svg {
+  width: 13px;
+  height: 13px;
+}
+
+/* --- Floating Formatting Settings Popup --- */
+.format-settings-popup {
+  position: absolute;
+  top: 36px;
+  right: 48px; /* Position directly underneath the format control */
+  width: 300px;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  box-shadow: 0 10px 25px rgba(15, 23, 42, 0.15);
+  padding: 14px;
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  transition: opacity var(--transition-fast), transform var(--transition-fast);
+}
+
+.format-settings-popup.hidden {
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(-8px);
+}
+
+.popup-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid var(--border-color);
+  padding-bottom: 6px;
+}
+
+.popup-header h3 {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--color-text);
+  margin: 0;
+  letter-spacing: -0.2px;
+}
+
+.popup-header .btn-close {
+  padding: 2px;
+}
+
+.popup-header .btn-close svg {
+  width: 14px;
+  height: 14px;
+}
+
+.popup-body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.form-group-compact {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.form-group-compact label {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
+}
+
+.form-select-compact {
+  padding: 5px 8px;
+  font-size: 0.76rem;
+  border-radius: var(--radius-sm);
+  background: var(--bg-input);
+  border: 1px solid var(--border-color);
+  color: var(--color-text);
+  font-family: var(--font-sans);
+  width: 100%;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%234b5563'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 8px center;
+  background-size: 12px;
+  padding-right: 28px;
+}
+
+.form-input-compact {
+  padding: 5px 8px;
+  font-size: 0.76rem;
+  border-radius: var(--radius-sm);
+  background: var(--bg-input);
+  border: 1px solid var(--border-color);
+  color: var(--color-text);
+  font-family: var(--font-sans);
+  width: 100%;
+}
+
+.form-select-compact:focus,
+.form-input-compact:focus {
+  outline: none;
+  border-color: var(--border-focus);
+}
+
+.popup-footer {
+  display: flex;
+  justify-content: flex-end;
+  border-top: 1px solid var(--border-color);
+  padding-top: 8px;
+}
+
+.btn-sm {
+  padding: 6px 12px !important;
+  font-size: 0.76rem !important;
+  border-radius: var(--radius-sm) !important;
+}
+
+.form-row-compact {
+  display: flex;
+  gap: 8px;
+}
+
+.form-row-compact .form-group-compact {
+  flex: 1;
+  min-width: 0;
+}
+
 
 

@@ -173,11 +173,20 @@
                 <button type="button" class="rows-limit-btn active" id="btn-limit-config" data-limit="config" title="Limit rows fetched to connection default (10)">10</button>
                 <button type="button" class="rows-limit-btn" id="btn-limit-unlimited" data-limit="unlimited" title="Fetch all rows without limit">All</button>
               </div>
-              <button id="btn-format" class="btn-icon-only btn-panel-control" title="Format SQL (Shift+Alt+F)">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M4 6h16M4 12h16M4 18h12"></path>
-                </svg>
-              </button>
+              <div class="format-segmented" id="format-segmented">
+                <button type="button" class="format-btn" id="btn-format" title="Format SQL (Shift+Alt+F)">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M4 6h16M4 12h16M4 18h12"></path>
+                  </svg>
+                  <span>Format</span>
+                </button>
+                <button type="button" class="format-btn-settings" id="btn-format-settings" title="Formatting Options">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="3"></circle>
+                    <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+                  </svg>
+                </button>
+              </div>
               <button id="btn-run" class="btn-panel-control btn-run-icon" title="Simulate running query">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <polygon points="5 3 19 12 5 21 5 3"></polygon>
@@ -188,6 +197,90 @@
                   <path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/>
                 </svg>
               </button>
+            </div>
+            <!-- Formatting Settings Popup -->
+            <div id="format-settings-popup" class="format-settings-popup hidden">
+              <div class="popup-header">
+                <h3>SQL Formatting Options</h3>
+                <button id="btn-close-format-settings" class="btn-close" title="Close options">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                  </svg>
+                </button>
+              </div>
+              <div class="popup-body">
+                <div class="form-row-compact">
+                  <div class="form-group-compact">
+                    <label for="fmt-keyword-case">Keyword Case</label>
+                    <select id="fmt-keyword-case" class="form-select-compact">
+                      <option value="upper">UPPER CASE</option>
+                      <option value="lower">lower case</option>
+                      <option value="preserve">Preserve</option>
+                    </select>
+                  </div>
+                  <div class="form-group-compact">
+                    <label for="fmt-datatype-case">Data Type Case</label>
+                    <select id="fmt-datatype-case" class="form-select-compact">
+                      <option value="upper">UPPER CASE</option>
+                      <option value="lower">lower case</option>
+                      <option value="preserve">Preserve</option>
+                    </select>
+                  </div>
+                </div>
+                
+                <div class="form-row-compact">
+                  <div class="form-group-compact">
+                    <label for="fmt-function-case">Function Case</label>
+                    <select id="fmt-function-case" class="form-select-compact">
+                      <option value="upper">UPPER CASE</option>
+                      <option value="lower">lower case</option>
+                      <option value="preserve">Preserve</option>
+                    </select>
+                  </div>
+                  <div class="form-group-compact">
+                    <label for="fmt-indent">Indentation</label>
+                    <select id="fmt-indent" class="form-select-compact">
+                      <option value="2-spaces">2 Spaces</option>
+                      <option value="4-spaces">4 Spaces</option>
+                      <option value="tabs">Tabs</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div class="form-row-compact">
+                  <div class="form-group-compact">
+                    <label for="fmt-indent-style">Indent Style</label>
+                    <select id="fmt-indent-style" class="form-select-compact">
+                      <option value="standard">Standard</option>
+                      <option value="tabularLeft">Tabular Left</option>
+                    </select>
+                  </div>
+                  <div class="form-group-compact">
+                    <label for="fmt-operator-newline">Operator Line</label>
+                    <select id="fmt-operator-newline" class="form-select-compact">
+                      <option value="before">Before operator</option>
+                      <option value="after">After operator</option>
+                    </select>
+                  </div>
+                </div>
+
+
+
+                <div class="form-row-compact">
+                  <div class="form-group-compact">
+                    <label for="fmt-lines-between">Query Spacing</label>
+                    <input type="number" id="fmt-lines-between" class="form-input-compact" min="1" max="5" value="2">
+                  </div>
+                  <div class="form-group-compact">
+                    <label for="fmt-expr-width">Max Expr Width</label>
+                    <input type="number" id="fmt-expr-width" class="form-input-compact" min="10" max="200" value="50">
+                  </div>
+                </div>
+              </div>
+              <div class="popup-footer">
+                <button type="button" id="btn-save-format-settings" class="btn btn-primary btn-sm">Apply Options</button>
+              </div>
             </div>
           </div>
 
