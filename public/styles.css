@@ -1385,3 +1385,69 @@ body {
   display: none !important;
 }
 
+/* --- Segmented Results View Controls --- */
+.results-view-segmented {
+  display: flex;
+  background: rgba(0, 0, 0, 0.03);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  padding: 2px;
+  height: 28px;
+  box-sizing: border-box;
+  align-items: center;
+  gap: 2px;
+}
+
+.results-view-btn {
+  background: transparent;
+  border: none;
+  color: var(--color-text-dim);
+  cursor: pointer;
+  padding: 0;
+  border-radius: calc(var(--radius-sm) - 2px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--transition-fast);
+  width: 24px;
+  height: 22px;
+}
+
+.results-view-btn svg {
+  width: 14px;
+  height: 14px;
+}
+
+.results-view-btn:hover {
+  color: var(--color-primary);
+  background: rgba(0, 0, 0, 0.04);
+}
+
+.results-view-btn.active {
+  color: var(--color-primary);
+  background: var(--bg-surface);
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.08);
+}
+
+/* --- Results Table Wrapping Modes --- */
+#results-table.view-nowrap {
+  table-layout: auto !important;
+}
+
+#results-table.view-nowrap th,
+#results-table.view-nowrap td {
+  white-space: nowrap !important;
+}
+
+#results-table.view-nooverflow {
+  table-layout: auto !important;
+}
+
+#results-table.view-nooverflow th,
+#results-table.view-nooverflow td {
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  max-width: 250px !important;
+}
+
