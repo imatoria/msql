@@ -687,6 +687,40 @@ function applySqlLimit(sql, limit, type) {
   return sql;
 }
 
+// API: Format SQL Query using sql-formatter library
+app.post('/api/queries/format', (req, res) => {
+  const { sql, type } = req.body;
+  if (!sql) {
+    return res.status(400).json({ error: 'SQL query body is required' });
+  }
+  
+  try {
+    const { format } = require('sql-formatter');
+    
+    // Map mSql database types to sql-formatter language dialects
+    let language = 'sql';
+    if (type === 'mssql') {
+      language = 'tsql';
+    } else if (type === 'postgres') {
+      language = 'postgresql';
+    } else if (type === 'mysql') {
+      language = 'mysql';
+    }
+    
+    const formatted = format(sql, {
+      language: language,
+      tabWidth: 2,
+      keywordCase: 'upper',
+      linesBetweenQueries: 2
+    });
+    
+    res.json({ formatted });
+  } catch (err) {
+    console.error('SQL Formatting Error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // API: Run live database SQL query
 app.post('/api/queries/run', async (req, res) => {
   const { sql, limit } = req.body;

@@ -70,6 +70,7 @@ const elements = {
   unsavedDot: document.getElementById('unsaved-dot'),
   btnSave: document.getElementById('btn-save'),
   btnDelete: document.getElementById('btn-delete'),
+  btnFormat: document.getElementById('btn-format'),
   btnRun: document.getElementById('btn-run'),
   sqlTextarea: document.getElementById('sql-textarea'),
   lineNumbers: document.getElementById('editor-line-numbers'),
@@ -131,6 +132,7 @@ function setupEventListeners() {
   elements.btnWelcomeNew.addEventListener('click', createNewQuery);
   elements.btnSave.addEventListener('click', saveActiveQuery);
   elements.btnDelete.addEventListener('click', deleteActiveQuery);
+  elements.btnFormat.addEventListener('click', formatActiveQuery);
   elements.btnRun.addEventListener('click', executeActiveQuery);
   
   // Settings Modal Listeners
@@ -221,6 +223,14 @@ function setupEventListeners() {
     if ((e.metaKey || e.ctrlKey) && e.key === 's') {
       e.preventDefault();
       saveActiveQuery();
+    }
+    
+    // Format Query Shortcut (Shift+Alt+F or Ctrl+Shift+F)
+    const isShiftAltF = e.shiftKey && e.altKey && (e.key === 'f' || e.key === 'F');
+    const isCtrlShiftF = (e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === 'f' || e.key === 'F');
+    if (isShiftAltF || isCtrlShiftF) {
+      e.preventDefault();
+      formatActiveQuery();
     }
   });
 
@@ -882,6 +892,76 @@ function resetResults() {
   elements.resultsTableContainer.classList.add('hidden');
   elements.resultsErrorContainer.classList.add('hidden');
   elements.resultsMeta.textContent = 'Ready';
+}
+
+// Format SQL query using server API
+async function formatActiveQuery() {
+  const sql = elements.sqlTextarea.value;
+  if (!sql || !sql.trim()) {
+    showToast('SQL query is empty', 'error');
+    return;
+  }
+  
+  try {
+    elements.btnFormat.disabled = true;
+    
+    // Get active connection type
+    let dbType = 'sql';
+    if (state.activeConnectionId) {
+      const activeConn = state.connections.find(c => c.id === state.activeConnectionId);
+      if (activeConn) {
+        dbType = activeConn.type;
+      }
+    }
+    
+    const response = await fetch('/api/queries/format', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ sql, type: dbType })
+    });
+    
+    if (!response.ok) {
+      let errMsg = 'Failed to format query';
+      const contentType = response.headers.get('content-type');
+      if (contentType && contentType.includes('application/json')) {
+        const err = await response.json();
+        errMsg = err.error || errMsg;
+      } else {
+        if (response.status === 404) {
+          errMsg = 'Formatting endpoint not found (404). Please ensure you have restarted your local Node server.';
+        } else {
+          errMsg = `HTTP Error ${response.status}`;
+        }
+      }
+      throw new Error(errMsg);
+    }
+    
+    const data = await response.json();
+    if (data.formatted) {
+      const originalValue = elements.sqlTextarea.value;
+      if (originalValue !== data.formatted) {
+        elements.sqlTextarea.value = data.formatted;
+        updateLineNumbers();
+        
+        // Sync with active tab
+        if (state.activeTabId) {
+          const activeTab = state.tabs.find(t => t.filename === state.activeTabId);
+          if (activeTab) {
+            activeTab.sql = data.formatted;
+            const changed = checkTabChanges(activeTab);
+            markUnsaved(changed);
+            updateTabElementUnsavedDot(activeTab.filename, changed);
+          }
+        }
+        showToast('Query formatted successfully');
+      }
+    }
+  } catch (error) {
+    showToast(`Formatting failed: ${error.message}`, 'error');
+  } finally {
+    elements.btnFormat.disabled = false;
+    elements.sqlTextarea.focus();
+  }
 }
 
 // Execute SQL Query (Determines Mock or Live Database Mode)
