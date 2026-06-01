@@ -170,6 +170,10 @@
               <span id="unsaved-dot" class="unsaved-dot hidden" title="Unsaved changes"></span>
             </div>
             <div class="editor-controls">
+              <div class="rows-limit-segmented" id="rows-limit-segmented">
+                <button type="button" class="rows-limit-btn active" id="btn-limit-config" data-limit="config" title="Limit rows fetched to connection default (10)">10</button>
+                <button type="button" class="rows-limit-btn" id="btn-limit-unlimited" data-limit="unlimited" title="Fetch all rows without limit">All</button>
+              </div>
               <button id="btn-run" class="btn-panel-control btn-run-icon" title="Simulate running query">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <polygon points="5 3 19 12 5 21 5 3"></polygon>
@@ -332,6 +336,10 @@
         <div class="form-group">
           <label for="queries-path">Queries Folder Path</label>
           <input type="text" id="queries-path" placeholder="e.g. queries/dev or C:\MyQueries (Leave empty for default)">
+        </div>
+        <div class="form-group">
+          <label for="db-rows-limit">Default Rows Limit</label>
+          <input type="number" id="db-rows-limit" min="1" placeholder="10" value="10">
         </div>
         <div class="modal-actions">
           <button type="button" id="btn-test-connection" class="btn btn-secondary">Test Connection</button>

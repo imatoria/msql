@@ -81,6 +81,8 @@ const elements = {
   resultsViewBtns: document.querySelectorAll('.results-view-btn'),
   resultsTable: document.getElementById('results-table'),
   toast: document.getElementById('toast'),
+  dbRowsLimit: document.getElementById('db-rows-limit'),
+  rowsLimitBtns: document.querySelectorAll('.rows-limit-btn'),
   
   // Settings Modal elements
   btnSettingsToggle: document.getElementById('btn-settings-toggle'),
@@ -274,6 +276,21 @@ function setupEventListeners() {
     });
   });
 
+  elements.rowsLimitBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      const limitMode = btn.dataset.limit;
+      if (state.activeTabId) {
+        const activeTab = state.tabs.find(t => t.filename === state.activeTabId);
+        if (activeTab) {
+          activeTab.rowsLimitMode = limitMode;
+          applyRowsLimitMode(limitMode);
+        }
+      } else {
+        applyRowsLimitMode(limitMode);
+      }
+    });
+  });
+
   window.addEventListener('beforeunload', (e) => {
     if (hasAnyUnsavedChanges()) {
       e.preventDefault();
@@ -420,6 +437,7 @@ function openTab(query) {
     created: query.created,
     results: null, // to preserve execution results per tab
     resultsViewMode: 'wrap', // default view mode
+    rowsLimitMode: 'config', // default rows limit mode
     
     originalTitle: query.title,
     originalDescription: query.description || '',
@@ -462,6 +480,9 @@ function switchTab(filename) {
       updateLineNumbers();
       markUnsaved(activeTab.hasChanges);
       
+      // Restore tab-specific rows limit mode
+      applyRowsLimitMode(activeTab.rowsLimitMode || 'config');
+
       // Restore tab-specific query results
       if (activeTab.results) {
         applyResultsViewMode(activeTab.resultsViewMode || 'wrap');
@@ -480,6 +501,7 @@ function switchTab(filename) {
     // If no active tab, show welcome screen
     elements.welcomeScreen.classList.remove('hidden');
     elements.editorWorkspace.classList.add('hidden');
+    applyRowsLimitMode('config');
   }
   
   // Highlight list selection
@@ -501,6 +523,18 @@ function applyResultsViewMode(mode) {
   if (elements.resultsViewBtns) {
     elements.resultsViewBtns.forEach(btn => {
       if (btn.dataset.mode === mode) {
+        btn.classList.add('active');
+      } else {
+        btn.classList.remove('active');
+      }
+    });
+  }
+}
+
+function applyRowsLimitMode(mode) {
+  if (elements.rowsLimitBtns) {
+    elements.rowsLimitBtns.forEach(btn => {
+      if (btn.dataset.limit === mode) {
         btn.classList.add('active');
       } else {
         btn.classList.remove('active');
@@ -847,9 +881,36 @@ async function executeActiveQuery() {
   
   const sql = elements.sqlTextarea.value;
   
+  // Clean single-line and multi-line comments from the SQL query before execution
+  const cleanedSql = sql
+    .replace(/\/\*[\s\S]*?\*\//g, '') // Remove /* ... */ block comments
+    .replace(/--.*$/gm, '')           // Remove -- single line comments
+    .trim();
+    
+  if (!cleanedSql) {
+    showToast('SQL query is empty (or contains only comments).', 'error');
+    resetResults();
+    return;
+  }
+  
+  // Calculate limit parameter to send
+  const rowsLimitMode = activeTab.rowsLimitMode || 'config';
+  let limit = 'unlimited';
+  
+  if (rowsLimitMode === 'config') {
+    let currentLimit = 10;
+    if (state.activeConnectionId) {
+      const activeConn = state.connections.find(c => c.id === state.activeConnectionId);
+      if (activeConn && typeof activeConn.defaultRowsLimit !== 'undefined') {
+        currentLimit = activeConn.defaultRowsLimit;
+      }
+    }
+    limit = currentLimit;
+  }
+  
   if (!state.dbConfigured) {
     // Run in local mock mode
-    simulateMockQuery(sql);
+    simulateMockQuery(cleanedSql, limit);
     return;
   }
   
@@ -860,7 +921,7 @@ async function executeActiveQuery() {
       headers: {
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify({ sql })
+      body: JSON.stringify({ sql: cleanedSql, limit })
     });
     
     const data = await response.json();
@@ -888,7 +949,7 @@ async function executeActiveQuery() {
 }
 
 // Fallback Mock Query Simulation
-function simulateMockQuery(sqlText) {
+function simulateMockQuery(sqlText, limit) {
   setTimeout(() => {
     if (!state.activeTabId) return;
     const activeTab = state.tabs.find(t => t.filename === state.activeTabId);
@@ -909,13 +970,23 @@ function simulateMockQuery(sqlText) {
       label = 'Postgres Stat Indexes Simulated (Local Mode)';
     }
     
+    // Slice rows only if the query is a simple select (simulating applySqlLimit behavior)
+    let finalRows = dataset.rows;
+    const cleanSql = sqlText.toLowerCase().trim();
+    const hasLimit = /\btop\b\s*\(?\s*\d+/.test(cleanSql) || /\blimit\b\s+\d+/.test(cleanSql) || /\bfetch\s+first\s+\d+/.test(cleanSql);
+    const isSimpleSelect = /^select\b/.test(cleanSql) && !/\bunion\b/.test(cleanSql) && !/\bwith\b/.test(cleanSql);
+    
+    if (limit && limit !== 'unlimited' && isSimpleSelect && !hasLimit) {
+      finalRows = dataset.rows.slice(0, limit);
+    }
+    
     activeTab.results = {
       columns: dataset.columns,
-      rows: dataset.rows,
+      rows: finalRows,
       metaText: label
     };
     
-    renderResultsGrid(dataset.columns, dataset.rows, label);
+    renderResultsGrid(dataset.columns, finalRows, label);
   }, 400);
 }
 
@@ -1008,6 +1079,7 @@ async function loadConnectionConfig(activeIdToSelect = null) {
     
     populateModalFields(targetId);
     updateStatusIndicator(data);
+    updateRowsLimitUI();
   } catch (error) {
     console.error('Error loading config:', error);
   }
@@ -1024,6 +1096,7 @@ function populateModalFields(id) {
     elements.dbUser.value = '';
     elements.dbPassword.value = '';
     elements.queriesPath.value = '';
+    elements.dbRowsLimit.value = '10';
     elements.btnDeleteConnection.classList.add('hidden');
   } else {
     const conn = state.connections.find(c => c.id === id);
@@ -1037,7 +1110,32 @@ function populateModalFields(id) {
       elements.dbUser.value = conn.username || '';
       elements.dbPassword.value = conn.password || '';
       elements.queriesPath.value = conn.queriesPath || '';
+      elements.dbRowsLimit.value = typeof conn.defaultRowsLimit !== 'undefined' ? conn.defaultRowsLimit : '10';
       elements.btnDeleteConnection.classList.remove('hidden');
+    }
+  }
+}
+
+function updateRowsLimitUI() {
+  let currentLimit = 10;
+  if (state.activeConnectionId) {
+    const activeConn = state.connections.find(c => c.id === state.activeConnectionId);
+    if (activeConn && typeof activeConn.defaultRowsLimit !== 'undefined') {
+      currentLimit = activeConn.defaultRowsLimit;
+    }
+  }
+  
+  const configBtn = document.getElementById('btn-limit-config');
+  if (configBtn) {
+    configBtn.textContent = currentLimit;
+    configBtn.title = `Limit rows fetched to connection default (${currentLimit})`;
+  }
+  
+  // Also update activeTab state display limit if active
+  if (state.activeTabId) {
+    const activeTab = state.tabs.find(t => t.filename === state.activeTabId);
+    if (activeTab && activeTab.rowsLimitMode === 'config') {
+      applyRowsLimitMode('config');
     }
   }
 }
@@ -1206,6 +1304,7 @@ async function saveConnectionSettings(e) {
   const username = elements.dbUser.value.trim();
   const password = elements.dbPassword.value;
   const queriesPath = elements.queriesPath.value.trim();
+  const defaultRowsLimit = parseInt(elements.dbRowsLimit.value, 10) || 10;
   
   if (!name) {
     showToast('Connection name is required.', 'error');
@@ -1222,7 +1321,7 @@ async function saveConnectionSettings(e) {
       headers: {
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify({ name, type, host, port, database, username, password, queriesPath })
+      body: JSON.stringify({ name, type, host, port, database, username, password, queriesPath, defaultRowsLimit })
     });
     
     if (!response.ok) throw new Error('Failed to save connection config');

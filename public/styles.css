@@ -1451,3 +1451,44 @@ body {
   max-width: 250px !important;
 }
 
+/* --- Segmented Rows Limit Controls --- */
+.rows-limit-segmented {
+  display: flex;
+  background: rgba(0, 0, 0, 0.03);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  padding: 2px;
+  height: 28px;
+  box-sizing: border-box;
+  align-items: center;
+  gap: 2px;
+}
+
+.rows-limit-btn {
+  background: transparent;
+  border: none;
+  color: var(--color-text-dim);
+  cursor: pointer;
+  padding: 0 8px;
+  border-radius: calc(var(--radius-sm) - 2px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--transition-fast);
+  height: 22px;
+  font-size: 0.76rem;
+  font-weight: 500;
+  font-family: var(--font-sans);
+}
+
+.rows-limit-btn:hover {
+  color: var(--color-primary);
+  background: rgba(0, 0, 0, 0.04);
+}
+
+.rows-limit-btn.active {
+  color: var(--color-primary);
+  background: var(--bg-surface);
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.08);
+}
+

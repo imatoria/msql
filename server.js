@@ -379,7 +379,7 @@ app.get('/api/config', (req, res) => {
 
 // API: Create new Connection Config
 app.post('/api/config', (req, res) => {
-  const { name, type, host, port, database, username, password, queriesPath } = req.body;
+  const { name, type, host, port, database, username, password, queriesPath, defaultRowsLimit } = req.body;
   if (!name) return res.status(400).json({ error: 'Connection name is required.' });
   
   try {
@@ -395,7 +395,8 @@ app.post('/api/config', (req, res) => {
       database: database || '',
       username: username || '',
       password: password || '',
-      queriesPath: queriesPath ? queriesPath.trim() : ''
+      queriesPath: queriesPath ? queriesPath.trim() : '',
+      defaultRowsLimit: typeof defaultRowsLimit !== 'undefined' ? parseInt(defaultRowsLimit, 10) || 10 : 10
     };
     
     config.connections.push(newConn);
@@ -416,7 +417,7 @@ app.post('/api/config', (req, res) => {
 // API: Update Connection Config
 app.put('/api/config/:id', (req, res) => {
   const { id } = req.params;
-  const { name, type, host, port, database, username, password, queriesPath } = req.body;
+  const { name, type, host, port, database, username, password, queriesPath, defaultRowsLimit } = req.body;
   if (!name) return res.status(400).json({ error: 'Connection name is required.' });
   
   try {
@@ -438,7 +439,8 @@ app.put('/api/config/:id', (req, res) => {
       database: database || '',
       username: username || '',
       password: finalPassword,
-      queriesPath: queriesPath ? queriesPath.trim() : ''
+      queriesPath: queriesPath ? queriesPath.trim() : '',
+      defaultRowsLimit: typeof defaultRowsLimit !== 'undefined' ? parseInt(defaultRowsLimit, 10) || 10 : 10
     };
     
     saveConfig(config);
@@ -628,9 +630,37 @@ app.post('/api/config/test', async (req, res) => {
   }
 });
 
+function hasLimitOrTop(sql, type) {
+  const cleanSql = sql.toLowerCase().trim();
+  if (type === 'mssql') {
+    return /\btop\b\s*\(?\s*\d+/.test(cleanSql) || /\bfetch\s+first\s+\d+/.test(cleanSql);
+  } else {
+    return /\blimit\b\s+\d+/.test(cleanSql) || /\bfetch\s+first\s+\d+/.test(cleanSql);
+  }
+}
+
+function applySqlLimit(sql, limit, type) {
+  if (!limit || limit === 'unlimited') return sql;
+  
+  const cleanSql = sql.toLowerCase().trim();
+  if (hasLimitOrTop(sql, type)) return sql;
+  
+  const isSimpleSelect = /^select\b/.test(cleanSql) && !/\bunion\b/.test(cleanSql) && !/\bwith\b/.test(cleanSql);
+  
+  if (isSimpleSelect) {
+    if (type === 'mssql') {
+      return sql.replace(/select/i, `SELECT TOP ${limit}`);
+    } else {
+      return `${sql.trim()} LIMIT ${limit}`;
+    }
+  }
+  
+  return sql;
+}
+
 // API: Run live database SQL query
 app.post('/api/queries/run', async (req, res) => {
-  const { sql } = req.body;
+  const { sql, limit } = req.body;
   
   if (!sql) {
     return res.status(400).json({ error: 'SQL query body is required' });
@@ -648,7 +678,8 @@ app.post('/api/queries/run', async (req, res) => {
       return res.status(400).json({ error: 'No active database connection configured.' });
     }
     
-    const results = await executeLiveQuery(active, sql);
+    const sqlToRun = applySqlLimit(sql, limit, active.type);
+    const results = await executeLiveQuery(active, sqlToRun);
     res.json(results);
   } catch (err) {
     console.error('SQL Execution Error:', err);
