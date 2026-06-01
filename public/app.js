@@ -99,6 +99,7 @@ const elements = {
   connectionProfileSelect: document.getElementById('connection-profile-select'),
   btnDeleteConnection: document.getElementById('btn-delete-connection'),
   connectionName: document.getElementById('connection-name'),
+  queriesPath: document.getElementById('queries-path'),
   
   // Layout Controls
   btnToggleSidebar: document.getElementById('btn-toggle-sidebar'),
@@ -672,6 +673,7 @@ function populateModalFields(id) {
     elements.dbName.value = '';
     elements.dbUser.value = '';
     elements.dbPassword.value = '';
+    elements.queriesPath.value = '';
     elements.btnDeleteConnection.classList.add('hidden');
   } else {
     const conn = state.connections.find(c => c.id === id);
@@ -684,6 +686,7 @@ function populateModalFields(id) {
       elements.dbName.value = conn.database || '';
       elements.dbUser.value = conn.username || '';
       elements.dbPassword.value = conn.password || '';
+      elements.queriesPath.value = conn.queriesPath || '';
       elements.btnDeleteConnection.classList.remove('hidden');
     }
   }
@@ -706,6 +709,7 @@ async function handleProfileChange() {
       const res = await response.json();
       state.activeConnectionId = res.activeConnectionId;
       await loadConnectionConfig(selectedId);
+      await fetchQueries();
     } catch (e) {
       showToast('Failed to switch active connection profile', 'error');
     }
@@ -830,6 +834,7 @@ async function saveConnectionSettings(e) {
   const database = elements.dbName.value.trim();
   const username = elements.dbUser.value.trim();
   const password = elements.dbPassword.value;
+  const queriesPath = elements.queriesPath.value.trim();
   
   if (!name) {
     showToast('Connection name is required.', 'error');
@@ -846,7 +851,7 @@ async function saveConnectionSettings(e) {
       headers: {
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify({ name, type, host, port, database, username, password })
+      body: JSON.stringify({ name, type, host, port, database, username, password, queriesPath })
     });
     
     if (!response.ok) throw new Error('Failed to save connection config');
@@ -866,6 +871,7 @@ async function saveConnectionSettings(e) {
     }
     
     await loadConnectionConfig(activeId);
+    await fetchQueries();
     closeSettingsModal();
   } catch (error) {
     showToast(`Error: ${error.message}`, 'error');

@@ -4,11 +4,84 @@ const path = require('path');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-const QUERIES_DIR = path.join(__dirname, 'queries');
+const CONFIG_FILE = path.join(__dirname, 'config.json');
 
-// Ensure queries directory exists
-if (!fs.existsSync(QUERIES_DIR)) {
-  fs.mkdirSync(QUERIES_DIR, { recursive: true });
+// Helper: Load connections config with migration logic
+function loadConfig() {
+  const defaultStructure = {
+    activeConnectionId: null,
+    connections: []
+  };
+  
+  if (!fs.existsSync(CONFIG_FILE)) {
+    return defaultStructure;
+  }
+  
+  try {
+    const raw = fs.readFileSync(CONFIG_FILE, 'utf-8');
+    const parsed = JSON.parse(raw);
+    
+    // Check if it's the old single-connection structure
+    if (parsed && typeof parsed === 'object' && !Array.isArray(parsed.connections) && parsed.host !== undefined) {
+      const migratedConn = {
+        id: 'conn_migrated',
+        name: 'Migrated SQL Server',
+        type: parsed.type || 'mssql',
+        host: parsed.host || '',
+        port: parsed.port || '1433',
+        database: parsed.database || '',
+        username: parsed.username || '',
+        password: parsed.password || ''
+      };
+      
+      const newConfig = {
+        activeConnectionId: migratedConn.host && migratedConn.database ? 'conn_migrated' : null,
+        connections: [migratedConn]
+      };
+      
+      fs.writeFileSync(CONFIG_FILE, JSON.stringify(newConfig, null, 2), 'utf-8');
+      return newConfig;
+    }
+    
+    return {
+      activeConnectionId: parsed.activeConnectionId || null,
+      connections: Array.isArray(parsed.connections) ? parsed.connections : []
+    };
+  } catch (err) {
+    console.error('Error reading/migrating connection config:', err);
+    return defaultStructure;
+  }
+}
+
+// Helper: Save connections config to file
+function saveConfig(config) {
+  fs.writeFileSync(CONFIG_FILE, JSON.stringify(config, null, 2), 'utf-8');
+}
+
+// Helper: Get active queries folder dynamically
+function getQueriesDir() {
+  try {
+    const config = loadConfig();
+    const active = config.connections.find(c => c.id === config.activeConnectionId);
+    if (active && active.queriesPath) {
+      const p = active.queriesPath.trim();
+      if (p) {
+        const resolved = path.isAbsolute(p) ? p : path.resolve(__dirname, p);
+        if (!fs.existsSync(resolved)) {
+          fs.mkdirSync(resolved, { recursive: true });
+        }
+        return resolved;
+      }
+    }
+  } catch (err) {
+    console.error('Error getting dynamic queries directory:', err);
+  }
+  
+  const defaultDir = path.join(__dirname, 'queries');
+  if (!fs.existsSync(defaultDir)) {
+    fs.mkdirSync(defaultDir, { recursive: true });
+  }
+  return defaultDir;
 }
 
 app.use(express.json());
@@ -123,10 +196,11 @@ function getSanitizedFilename(title) {
 // API: Get all queries
 app.get('/api/queries', (req, res) => {
   try {
-    const files = fs.readdirSync(QUERIES_DIR).filter(file => file.endsWith('.sql'));
+    const queriesDir = getQueriesDir();
+    const files = fs.readdirSync(queriesDir).filter(file => file.endsWith('.sql'));
     const queries = files.map(file => {
       try {
-        return parseSqlFile(path.join(QUERIES_DIR, file));
+        return parseSqlFile(path.join(queriesDir, file));
       } catch (err) {
         console.error(`Error parsing file ${file}:`, err);
         return null;
@@ -144,7 +218,8 @@ app.get('/api/queries', (req, res) => {
 // API: Get a single query
 app.get('/api/queries/:filename', (req, res) => {
   const { filename } = req.params;
-  const filePath = path.join(QUERIES_DIR, filename);
+  const queriesDir = getQueriesDir();
+  const filePath = path.join(queriesDir, filename);
   
   if (!fs.existsSync(filePath) || !filename.endsWith('.sql')) {
     return res.status(404).json({ error: 'Query not found' });
@@ -166,14 +241,15 @@ app.post('/api/queries', (req, res) => {
     return res.status(400).json({ error: 'Title is required' });
   }
   
+  const queriesDir = getQueriesDir();
   let filename = getSanitizedFilename(title);
-  let filePath = path.join(QUERIES_DIR, filename);
+  let filePath = path.join(queriesDir, filename);
   
   // Ensure unique filename
   let counter = 1;
   while (fs.existsSync(filePath)) {
     const baseName = filename.replace(/\.sql$/, '');
-    filePath = path.join(QUERIES_DIR, `${baseName}_${counter}.sql`);
+    filePath = path.join(queriesDir, `${baseName}_${counter}.sql`);
     filename = `${baseName}_${counter}.sql`;
     counter++;
   }
@@ -199,7 +275,8 @@ app.post('/api/queries', (req, res) => {
 app.put('/api/queries/:filename', (req, res) => {
   const { filename } = req.params;
   const { title, description, tags, sql } = req.body;
-  const oldPath = path.join(QUERIES_DIR, filename);
+  const queriesDir = getQueriesDir();
+  const oldPath = path.join(queriesDir, filename);
   
   if (!fs.existsSync(oldPath) || !filename.endsWith('.sql')) {
     return res.status(404).json({ error: 'Query file not found' });
@@ -212,7 +289,7 @@ app.put('/api/queries/:filename', (req, res) => {
   try {
     const existing = parseSqlFile(oldPath);
     let newFilename = getSanitizedFilename(title);
-    let newPath = path.join(QUERIES_DIR, newFilename);
+    let newPath = path.join(queriesDir, newFilename);
     
     // If filename needs to change because the title changed
     if (newFilename !== filename) {
@@ -220,7 +297,7 @@ app.put('/api/queries/:filename', (req, res) => {
       let counter = 1;
       while (fs.existsSync(newPath) && newFilename !== filename) {
         const baseName = newFilename.replace(/\.sql$/, '');
-        newPath = path.join(QUERIES_DIR, `${baseName}_${counter}.sql`);
+        newPath = path.join(queriesDir, `${baseName}_${counter}.sql`);
         newFilename = `${baseName}_${counter}.sql`;
         counter++;
       }
@@ -256,7 +333,8 @@ app.put('/api/queries/:filename', (req, res) => {
 // API: Delete query
 app.delete('/api/queries/:filename', (req, res) => {
   const { filename } = req.params;
-  const filePath = path.join(QUERIES_DIR, filename);
+  const queriesDir = getQueriesDir();
+  const filePath = path.join(queriesDir, filename);
   
   if (!fs.existsSync(filePath) || !filename.endsWith('.sql')) {
     return res.status(404).json({ error: 'Query file not found' });
@@ -270,59 +348,7 @@ app.delete('/api/queries/:filename', (req, res) => {
   }
 });
 
-const CONFIG_FILE = path.join(__dirname, 'config.json');
-
-// Helper: Load connections config with migration logic
-function loadConfig() {
-  const defaultStructure = {
-    activeConnectionId: null,
-    connections: []
-  };
-  
-  if (!fs.existsSync(CONFIG_FILE)) {
-    return defaultStructure;
-  }
-  
-  try {
-    const raw = fs.readFileSync(CONFIG_FILE, 'utf-8');
-    const parsed = JSON.parse(raw);
-    
-    // Check if it's the old single-connection structure
-    if (parsed && typeof parsed === 'object' && !Array.isArray(parsed.connections) && parsed.host !== undefined) {
-      const migratedConn = {
-        id: 'conn_migrated',
-        name: 'Migrated SQL Server',
-        type: parsed.type || 'mssql',
-        host: parsed.host || '',
-        port: parsed.port || '1433',
-        database: parsed.database || '',
-        username: parsed.username || '',
-        password: parsed.password || ''
-      };
-      
-      const newConfig = {
-        activeConnectionId: migratedConn.host && migratedConn.database ? 'conn_migrated' : null,
-        connections: [migratedConn]
-      };
-      
-      fs.writeFileSync(CONFIG_FILE, JSON.stringify(newConfig, null, 2), 'utf-8');
-      return newConfig;
-    }
-    
-    return {
-      activeConnectionId: parsed.activeConnectionId || null,
-      connections: Array.isArray(parsed.connections) ? parsed.connections : []
-    };
-  } catch (err) {
-    console.error('Error reading/migrating connection config:', err);
-    return defaultStructure;
-  }
-}
-
-// Helper: Save connections config to file
-function saveConfig(config) {
-  fs.writeFileSync(CONFIG_FILE, JSON.stringify(config, null, 2), 'utf-8');
-}
+// Configuration file helper calls are now handled at the top
 
 // API: Get Connections Config
 app.get('/api/config', (req, res) => {
@@ -353,7 +379,7 @@ app.get('/api/config', (req, res) => {
 
 // API: Create new Connection Config
 app.post('/api/config', (req, res) => {
-  const { name, type, host, port, database, username, password } = req.body;
+  const { name, type, host, port, database, username, password, queriesPath } = req.body;
   if (!name) return res.status(400).json({ error: 'Connection name is required.' });
   
   try {
@@ -368,7 +394,8 @@ app.post('/api/config', (req, res) => {
       port: port || '',
       database: database || '',
       username: username || '',
-      password: password || ''
+      password: password || '',
+      queriesPath: queriesPath ? queriesPath.trim() : ''
     };
     
     config.connections.push(newConn);
@@ -389,7 +416,7 @@ app.post('/api/config', (req, res) => {
 // API: Update Connection Config
 app.put('/api/config/:id', (req, res) => {
   const { id } = req.params;
-  const { name, type, host, port, database, username, password } = req.body;
+  const { name, type, host, port, database, username, password, queriesPath } = req.body;
   if (!name) return res.status(400).json({ error: 'Connection name is required.' });
   
   try {
@@ -410,7 +437,8 @@ app.put('/api/config/:id', (req, res) => {
       port: port || '',
       database: database || '',
       username: username || '',
-      password: finalPassword
+      password: finalPassword,
+      queriesPath: queriesPath ? queriesPath.trim() : ''
     };
     
     saveConfig(config);
