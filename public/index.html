@@ -90,14 +90,18 @@
 
     <!-- Main Workspace -->
     <main class="workspace">
-      <!-- Sidebar Toggle Button -->
-      <button id="btn-toggle-sidebar" class="btn-toggle-sidebar" title="Toggle Sidebar">
+      <!-- Sidebar Toggle Button (Floats on the divider) -->
+      <button id="btn-toggle-sidebar" class="btn-toggle-sidebar-divider" title="Collapse Sidebar">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <line x1="3" y1="12" x2="21" y2="12"></line>
-          <line x1="3" y1="6" x2="21" y2="6"></line>
-          <line x1="3" y1="18" x2="21" y2="18"></line>
+          <polyline points="15 18 9 12 15 6"></polyline>
         </svg>
       </button>
+
+      <!-- Workspace Header (Query Tabs) -->
+      <header id="workspace-header" class="workspace-header">
+        <div id="tabs-container" class="tabs-container"></div>
+      </header>
+
       <!-- Welcome Screen (Visible when no query selected) -->
       <section id="welcome-screen" class="welcome-screen">
         <div class="welcome-content">
@@ -166,11 +170,10 @@
               <span id="unsaved-dot" class="unsaved-dot hidden" title="Unsaved changes"></span>
             </div>
             <div class="editor-controls">
-              <button id="btn-run" class="btn btn-run" title="Simulate running query">
+              <button id="btn-run" class="btn-panel-control btn-run-icon" title="Simulate running query">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <polygon points="5 3 19 12 5 21 5 3"></polygon>
                 </svg>
-                <span>Run Query</span>
               </button>
               <button id="btn-maximize-editor" class="btn-icon-only btn-panel-control" title="Maximize Editor">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">

@@ -1,10 +1,10 @@
 // App State
 let state = {
   queries: [],
-  activeQuery: null,
+  tabs: [],            // Open tabs list
+  activeTabId: null,   // Filename of the active query tab
   activeTagFilter: null,
   searchText: '',
-  hasChanges: false,
   dbConfigured: false,
   connections: [],
   activeConnectionId: null
@@ -53,6 +53,8 @@ const MOCK_DATASETS = {
 
 // DOM Elements
 const elements = {
+  tabsContainer: document.getElementById('tabs-container'),
+  workspaceHeader: document.getElementById('workspace-header'),
   btnNewQuery: document.getElementById('btn-new-query'),
   btnWelcomeNew: document.getElementById('btn-welcome-new'),
   searchInput: document.getElementById('search-input'),
@@ -173,7 +175,15 @@ function setupEventListeners() {
   
   elements.sqlTextarea.addEventListener('input', () => {
     updateLineNumbers();
-    markUnsaved(true);
+    if (state.activeTabId) {
+      const activeTab = state.tabs.find(t => t.filename === state.activeTabId);
+      if (activeTab) {
+        activeTab.sql = elements.sqlTextarea.value;
+        const changed = checkTabChanges(activeTab);
+        markUnsaved(changed);
+        updateTabElementUnsavedDot(activeTab.filename, changed);
+      }
+    }
   });
 
   elements.sqlTextarea.addEventListener('scroll', () => {
@@ -190,7 +200,16 @@ function setupEventListeners() {
       elements.sqlTextarea.value = val.substring(0, start) + '    ' + val.substring(end);
       elements.sqlTextarea.selectionStart = elements.sqlTextarea.selectionEnd = start + 4;
       updateLineNumbers();
-      markUnsaved(true);
+      
+      if (state.activeTabId) {
+        const activeTab = state.tabs.find(t => t.filename === state.activeTabId);
+        if (activeTab) {
+          activeTab.sql = elements.sqlTextarea.value;
+          const changed = checkTabChanges(activeTab);
+          markUnsaved(changed);
+          updateTabElementUnsavedDot(activeTab.filename, changed);
+        }
+      }
     }
     
     // Command + S or Ctrl + S to Save
@@ -201,11 +220,48 @@ function setupEventListeners() {
   });
 
   // Track changes on title, desc, and tags inputs
-  const trackInputs = [elements.queryTitle, elements.queryDesc, elements.queryTags];
-  trackInputs.forEach(input => {
-    input.addEventListener('input', () => {
-      markUnsaved(true);
-    });
+  elements.queryTitle.addEventListener('input', () => {
+    if (state.activeTabId) {
+      const activeTab = state.tabs.find(t => t.filename === state.activeTabId);
+      if (activeTab) {
+        activeTab.title = elements.queryTitle.value;
+        const changed = checkTabChanges(activeTab);
+        markUnsaved(changed);
+        updateTabElementTitle(activeTab.filename, activeTab.title);
+        updateTabElementUnsavedDot(activeTab.filename, changed);
+      }
+    }
+  });
+
+  elements.queryDesc.addEventListener('input', () => {
+    if (state.activeTabId) {
+      const activeTab = state.tabs.find(t => t.filename === state.activeTabId);
+      if (activeTab) {
+        activeTab.description = elements.queryDesc.value;
+        const changed = checkTabChanges(activeTab);
+        markUnsaved(changed);
+        updateTabElementUnsavedDot(activeTab.filename, changed);
+      }
+    }
+  });
+
+  elements.queryTags.addEventListener('input', () => {
+    if (state.activeTabId) {
+      const activeTab = state.tabs.find(t => t.filename === state.activeTabId);
+      if (activeTab) {
+        activeTab.tags = elements.queryTags.value.split(',').map(t => t.trim()).filter(Boolean);
+        const changed = checkTabChanges(activeTab);
+        markUnsaved(changed);
+        updateTabElementUnsavedDot(activeTab.filename, changed);
+      }
+    }
+  });
+
+  window.addEventListener('beforeunload', (e) => {
+    if (hasAnyUnsavedChanges()) {
+      e.preventDefault();
+      e.returnValue = 'You have unsaved changes in your SQL queries. Are you sure you want to leave?';
+    }
   });
 }
 
@@ -274,7 +330,7 @@ function renderQueryList() {
 
   filtered.forEach(query => {
     const item = document.createElement('div');
-    item.className = `query-item ${state.activeQuery && state.activeQuery.filename === query.filename ? 'active' : ''}`;
+    item.className = `query-item ${state.activeTabId && state.activeTabId === query.filename ? 'active' : ''}`;
     
     const title = document.createElement('div');
     title.className = 'query-item-title';
@@ -309,11 +365,6 @@ function renderQueryList() {
     item.appendChild(meta);
     
     item.addEventListener('click', () => {
-      if (state.hasChanges) {
-        if (!confirm('You have unsaved changes. Discard and open this query?')) {
-          return;
-        }
-      }
       selectQuery(query);
     });
     
@@ -332,6 +383,213 @@ function toggleTagFilter(tag) {
   renderQueryList();
 }
 
+// Tab Management Functions
+
+function openTab(query) {
+  // Check if query is already open in a tab
+  const existingTab = state.tabs.find(t => t.filename === query.filename);
+  if (existingTab) {
+    switchTab(existingTab.filename);
+    return;
+  }
+  
+  // Create a new tab object
+  const newTab = {
+    filename: query.filename,
+    title: query.title,
+    description: query.description || '',
+    tags: Array.isArray(query.tags) ? [...query.tags] : [],
+    sql: query.sql || '',
+    created: query.created,
+    results: null, // to preserve execution results per tab
+    
+    originalTitle: query.title,
+    originalDescription: query.description || '',
+    originalTags: Array.isArray(query.tags) ? [...query.tags] : [],
+    originalSql: query.sql || '',
+    hasChanges: false
+  };
+  
+  state.tabs.push(newTab);
+  switchTab(newTab.filename);
+}
+
+function switchTab(filename) {
+  // 1. Save current input values into the active tab's state
+  saveCurrentTabInputsToMemory();
+  
+  // 2. Set activeTabId
+  state.activeTabId = filename;
+  
+  // 3. Render tabs list
+  renderTabs();
+  
+  // 4. Load the active tab's state into the editor UI inputs
+  if (filename) {
+    const activeTab = state.tabs.find(t => t.filename === filename);
+    if (activeTab) {
+      // Show editor, hide welcome screen
+      elements.welcomeScreen.classList.add('hidden');
+      elements.editorWorkspace.classList.remove('hidden');
+      
+      // Set input values
+      elements.queryTitle.value = activeTab.title;
+      elements.queryDesc.value = activeTab.description;
+      elements.queryTags.value = activeTab.tags.join(', ');
+      elements.queryCreated.textContent = activeTab.created;
+      elements.currentFilename.textContent = activeTab.filename;
+      elements.sqlTextarea.value = activeTab.sql;
+      
+      // Update line numbers and unsaved dot in editor toolbar
+      updateLineNumbers();
+      markUnsaved(activeTab.hasChanges);
+      
+      // Restore tab-specific query results
+      if (activeTab.results) {
+        if (activeTab.results.error) {
+          renderErrorResults(activeTab.results.error);
+        } else {
+          renderResultsGrid(activeTab.results.columns, activeTab.results.rows, activeTab.results.metaText);
+        }
+      } else {
+        resetResults();
+      }
+    }
+  } else {
+    // If no active tab, show welcome screen
+    elements.welcomeScreen.classList.remove('hidden');
+    elements.editorWorkspace.classList.add('hidden');
+  }
+  
+  // Highlight list selection
+  renderQueryList();
+}
+
+function closeTab(filename) {
+  const tabIndex = state.tabs.findIndex(t => t.filename === filename);
+  if (tabIndex === -1) return;
+  
+  const tab = state.tabs[tabIndex];
+  if (tab.hasChanges) {
+    if (!confirm(`"${tab.title}" has unsaved changes. Do you want to discard them and close the tab?`)) {
+      return;
+    }
+  }
+  
+  // Remove tab from state
+  state.tabs.splice(tabIndex, 1);
+  
+  // If we closed the active tab, switch to another tab
+  if (state.activeTabId === filename) {
+    if (state.tabs.length > 0) {
+      const nextActiveIndex = Math.min(tabIndex, state.tabs.length - 1);
+      const nextActiveFilename = state.tabs[nextActiveIndex].filename;
+      state.activeTabId = null; // reset temporarily to prevent saving closing tab state
+      switchTab(nextActiveFilename);
+    } else {
+      state.activeTabId = null;
+      switchTab(null);
+    }
+  } else {
+    // Just refresh tabs UI
+    renderTabs();
+  }
+}
+
+function saveCurrentTabInputsToMemory() {
+  if (!state.activeTabId) return;
+  const activeTab = state.tabs.find(t => t.filename === state.activeTabId);
+  if (activeTab) {
+    activeTab.title = elements.queryTitle.value;
+    activeTab.description = elements.queryDesc.value;
+    activeTab.tags = elements.queryTags.value.split(',').map(t => t.trim()).filter(Boolean);
+    activeTab.sql = elements.sqlTextarea.value;
+    
+    // Check if dirty
+    checkTabChanges(activeTab);
+  }
+}
+
+function checkTabChanges(tab) {
+  const titleChanged = tab.title !== tab.originalTitle;
+  const descChanged = tab.description !== tab.originalDescription;
+  const sqlChanged = tab.sql !== tab.originalSql;
+  
+  // Compare tags (arrays)
+  const tagsChanged = JSON.stringify(tab.tags) !== JSON.stringify(tab.originalTags);
+  
+  tab.hasChanges = titleChanged || descChanged || sqlChanged || tagsChanged;
+  return tab.hasChanges;
+}
+
+function hasAnyUnsavedChanges() {
+  return state.tabs.some(t => t.hasChanges);
+}
+
+function updateTabElementTitle(filename, title) {
+  const tabEl = document.querySelector(`.tab-item[data-filename="${filename}"]`);
+  if (tabEl) {
+    const titleSpan = tabEl.querySelector('.tab-title');
+    if (titleSpan) titleSpan.textContent = title || 'Untitled Query';
+  }
+}
+
+function updateTabElementUnsavedDot(filename, hasChanges) {
+  const tabEl = document.querySelector(`.tab-item[data-filename="${filename}"]`);
+  if (tabEl) {
+    const dot = tabEl.querySelector('.tab-unsaved-dot');
+    if (dot) {
+      if (hasChanges) {
+        dot.classList.remove('hidden');
+      } else {
+        dot.classList.add('hidden');
+      }
+    }
+  }
+}
+
+function renderTabs() {
+  elements.tabsContainer.innerHTML = '';
+  
+  state.tabs.forEach(tab => {
+    const tabEl = document.createElement('div');
+    tabEl.className = `tab-item ${state.activeTabId === tab.filename ? 'active' : ''}`;
+    tabEl.dataset.filename = tab.filename;
+    
+    const titleSpan = document.createElement('span');
+    titleSpan.className = 'tab-title';
+    titleSpan.textContent = tab.title || 'Untitled Query';
+    tabEl.appendChild(titleSpan);
+    
+    const dot = document.createElement('span');
+    dot.className = `tab-unsaved-dot ${tab.hasChanges ? '' : 'hidden'}`;
+    tabEl.appendChild(dot);
+    
+    const closeBtn = document.createElement('button');
+    closeBtn.className = 'tab-close-btn';
+    closeBtn.innerHTML = `
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 12px; height: 12px;">
+        <line x1="18" y1="6" x2="6" y2="18"></line>
+        <line x1="6" y1="6" x2="18" y2="18"></line>
+      </svg>
+    `;
+    closeBtn.title = 'Close tab';
+    closeBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      closeTab(tab.filename);
+    });
+    tabEl.appendChild(closeBtn);
+    
+    tabEl.addEventListener('click', () => {
+      if (state.activeTabId !== tab.filename) {
+        switchTab(tab.filename);
+      }
+    });
+    
+    elements.tabsContainer.appendChild(tabEl);
+  });
+}
+
 // Select a specific query to edit
 async function selectQuery(query) {
   try {
@@ -339,27 +597,7 @@ async function selectQuery(query) {
     if (!response.ok) throw new Error('Could not fetch query details');
     
     const data = await response.json();
-    state.activeQuery = data;
-    
-    // Set UI values
-    elements.queryTitle.value = data.title;
-    elements.queryDesc.value = data.description;
-    elements.queryTags.value = data.tags.join(', ');
-    elements.queryCreated.textContent = data.created;
-    elements.currentFilename.textContent = data.filename;
-    elements.sqlTextarea.value = data.sql;
-    
-    // Reset editor UI
-    updateLineNumbers();
-    markUnsaved(false);
-    resetResults();
-    
-    // Switch panels
-    elements.welcomeScreen.classList.add('hidden');
-    elements.editorWorkspace.classList.remove('hidden');
-    
-    // Highlight list selection
-    renderQueryList();
+    openTab(data);
   } catch (error) {
     showToast(`Error: ${error.message}`, 'error');
   }
@@ -380,12 +618,6 @@ function updateLineNumbers() {
 
 // Create New SQL query
 async function createNewQuery() {
-  if (state.hasChanges) {
-    if (!confirm('You have unsaved changes. Discard and create new query?')) {
-      return;
-    }
-  }
-  
   try {
     const response = await fetch('/api/queries', {
       method: 'POST',
@@ -414,13 +646,16 @@ async function createNewQuery() {
 
 // Save active SQL query
 async function saveActiveQuery() {
-  if (!state.activeQuery) return;
+  if (!state.activeTabId) return;
   
-  const title = elements.queryTitle.value.trim();
-  const description = elements.queryDesc.value.trim();
-  const tagsStr = elements.queryTags.value;
-  const tags = tagsStr.split(',').map(t => t.trim()).filter(Boolean);
-  const sql = elements.sqlTextarea.value;
+  saveCurrentTabInputsToMemory();
+  const activeTab = state.tabs.find(t => t.filename === state.activeTabId);
+  if (!activeTab) return;
+  
+  const title = activeTab.title.trim();
+  const description = activeTab.description.trim();
+  const tags = activeTab.tags;
+  const sql = activeTab.sql;
   
   if (!title) {
     showToast('Title is required!', 'error');
@@ -429,7 +664,7 @@ async function saveActiveQuery() {
   }
   
   try {
-    const response = await fetch(`/api/queries/${state.activeQuery.filename}`, {
+    const response = await fetch(`/api/queries/${activeTab.filename}`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json'
@@ -442,11 +677,29 @@ async function saveActiveQuery() {
     const updated = await response.json();
     showToast('Query saved successfully');
     
-    // Update active query in state
-    state.activeQuery = updated;
+    // Update tab info
+    const oldFilename = activeTab.filename;
+    activeTab.filename = updated.filename;
+    activeTab.title = updated.title;
+    activeTab.description = updated.description;
+    activeTab.tags = updated.tags;
+    activeTab.sql = updated.sql;
+    activeTab.created = updated.created;
+    
+    activeTab.originalTitle = updated.title;
+    activeTab.originalDescription = updated.description;
+    activeTab.originalTags = [...updated.tags];
+    activeTab.originalSql = updated.sql;
+    activeTab.hasChanges = false;
+    
+    if (oldFilename !== updated.filename) {
+      state.activeTabId = updated.filename;
+    }
+    
+    elements.currentFilename.textContent = updated.filename;
     markUnsaved(false);
     
-    // Reload sidebar queries list, selecting the newly updated filename (might have renamed due to title change)
+    // Reload sidebar queries list, selecting the newly updated filename
     await fetchQueries(updated.filename);
   } catch (error) {
     showToast(`Error: ${error.message}`, 'error');
@@ -455,25 +708,40 @@ async function saveActiveQuery() {
 
 // Delete active query
 async function deleteActiveQuery() {
-  if (!state.activeQuery) return;
+  if (!state.activeTabId) return;
+  const activeTab = state.tabs.find(t => t.filename === state.activeTabId);
+  if (!activeTab) return;
   
-  if (!confirm(`Are you sure you want to delete "${state.activeQuery.title}"?\nThis deletes the physical .sql file from your machine.`)) {
+  if (!confirm(`Are you sure you want to delete "${activeTab.title}"?\nThis deletes the physical .sql file from your machine.`)) {
     return;
   }
   
   try {
-    const response = await fetch(`/api/queries/${state.activeQuery.filename}`, {
+    const response = await fetch(`/api/queries/${activeTab.filename}`, {
       method: 'DELETE'
     });
     
     if (!response.ok) throw new Error('Failed to delete query file');
     
     showToast('Query deleted');
-    state.activeQuery = null;
-    markUnsaved(false);
     
-    elements.editorWorkspace.classList.add('hidden');
-    elements.welcomeScreen.classList.remove('hidden');
+    // Close the tab from state and UI
+    const tabIndex = state.tabs.findIndex(t => t.filename === activeTab.filename);
+    state.tabs.splice(tabIndex, 1);
+    
+    if (state.activeTabId === activeTab.filename) {
+      if (state.tabs.length > 0) {
+        const nextActiveIndex = Math.min(tabIndex, state.tabs.length - 1);
+        const nextActiveFilename = state.tabs[nextActiveIndex].filename;
+        state.activeTabId = null;
+        switchTab(nextActiveFilename);
+      } else {
+        state.activeTabId = null;
+        switchTab(null);
+      }
+    } else {
+      renderTabs();
+    }
     
     fetchQueries();
   } catch (error) {
@@ -483,7 +751,6 @@ async function deleteActiveQuery() {
 
 // Toggle unsaved changes dot
 function markUnsaved(unsaved) {
-  state.hasChanges = unsaved;
   if (unsaved) {
     elements.unsavedDot.classList.remove('hidden');
   } else {
@@ -520,7 +787,9 @@ function resetResults() {
 
 // Execute SQL Query (Determines Mock or Live Database Mode)
 async function executeActiveQuery() {
-  if (!state.activeQuery) return;
+  if (!state.activeTabId) return;
+  const activeTab = state.tabs.find(t => t.filename === state.activeTabId);
+  if (!activeTab) return;
   
   elements.resultsPlaceholder.classList.add('hidden');
   elements.resultsTableContainer.classList.add('hidden');
@@ -552,8 +821,19 @@ async function executeActiveQuery() {
     }
     
     const duration = Date.now() - startTime;
-    renderResultsGrid(data.columns, data.rows, `Query succeeded - ${duration}ms`);
+    const metaText = `Query succeeded - ${duration}ms`;
+    
+    activeTab.results = {
+      columns: data.columns,
+      rows: data.rows,
+      metaText: metaText
+    };
+    
+    renderResultsGrid(data.columns, data.rows, metaText);
   } catch (error) {
+    activeTab.results = {
+      error: error.message
+    };
     renderErrorResults(error.message);
   }
 }
@@ -561,6 +841,10 @@ async function executeActiveQuery() {
 // Fallback Mock Query Simulation
 function simulateMockQuery(sqlText) {
   setTimeout(() => {
+    if (!state.activeTabId) return;
+    const activeTab = state.tabs.find(t => t.filename === state.activeTabId);
+    if (!activeTab) return;
+    
     const sql = sqlText.toLowerCase();
     let dataset = MOCK_DATASETS.generic;
     let label = 'Mock Transaction Output (Local Mode)';
@@ -575,6 +859,12 @@ function simulateMockQuery(sqlText) {
       dataset = MOCK_DATASETS.indexes;
       label = 'Postgres Stat Indexes Simulated (Local Mode)';
     }
+    
+    activeTab.results = {
+      columns: dataset.columns,
+      rows: dataset.rows,
+      metaText: label
+    };
     
     renderResultsGrid(dataset.columns, dataset.rows, label);
   }, 400);
@@ -693,6 +983,15 @@ function populateModalFields(id) {
 }
 
 async function handleProfileChange() {
+  if (hasAnyUnsavedChanges()) {
+    if (!confirm('You have unsaved changes in some tabs. Switching profiles will discard these changes. Proceed anyway?')) {
+      // Revert selection to active connection id
+      elements.connectionProfileSelect.value = state.activeConnectionId || 'new';
+      populateModalFields(state.activeConnectionId || 'new');
+      return;
+    }
+  }
+
   const selectedId = elements.connectionProfileSelect.value;
   populateModalFields(selectedId);
   
@@ -708,6 +1007,12 @@ async function handleProfileChange() {
       if (!response.ok) throw new Error();
       const res = await response.json();
       state.activeConnectionId = res.activeConnectionId;
+      
+      // Clear open tabs on active profile switch
+      state.tabs = [];
+      state.activeTabId = null;
+      switchTab(null);
+      
       await loadConnectionConfig(selectedId);
       await fetchQueries();
     } catch (e) {
@@ -826,6 +1131,12 @@ async function testConnection() {
 async function saveConnectionSettings(e) {
   e.preventDefault();
   
+  if (hasAnyUnsavedChanges()) {
+    if (!confirm('You have unsaved changes in some tabs. Saving and switching settings will discard these changes. Proceed anyway?')) {
+      return;
+    }
+  }
+
   const selectedId = elements.connectionProfileSelect.value;
   const name = elements.connectionName.value.trim();
   const type = elements.dbType.value;
@@ -859,6 +1170,11 @@ async function saveConnectionSettings(e) {
     const result = await response.json();
     showToast('Database connection settings saved');
     
+    // Clear tabs on settings switch
+    state.tabs = [];
+    state.activeTabId = null;
+    switchTab(null);
+    
     const activeId = selectedId === 'new' ? result.connection.id : selectedId;
     if (selectedId === 'new') {
       await fetch('/api/config/active', {
@@ -887,17 +1203,13 @@ function toggleSidebar() {
   if (isCollapsed) {
     elements.btnToggleSidebar.innerHTML = `
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <line x1="21" y1="12" x2="3" y2="12"></line>
-        <line x1="21" y1="6" x2="3" y2="6"></line>
-        <line x1="21" y1="18" x2="3" y2="18"></line>
+        <polyline points="9 18 15 12 9 6"></polyline>
       </svg>
     `;
   } else {
     elements.btnToggleSidebar.innerHTML = `
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <line x1="3" y1="12" x2="21" y2="12"></line>
-        <line x1="3" y1="6" x2="21" y2="6"></line>
-        <line x1="3" y1="18" x2="21" y2="18"></line>
+        <polyline points="15 18 9 12 15 6"></polyline>
       </svg>
     `;
   }
