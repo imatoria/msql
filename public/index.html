@@ -303,13 +303,19 @@
           <label for="connection-name">Connection Name</label>
           <input type="text" id="connection-name" placeholder="e.g. Local SQL Server" required>
         </div>
-        <div class="form-group">
-          <label for="db-type">Database Engine</label>
-          <select id="db-type" class="form-select">
-            <option value="mssql">Microsoft SQL Server</option>
-            <option value="postgres">PostgreSQL</option>
-            <option value="mysql">MySQL</option>
-          </select>
+        <div class="form-row">
+          <div class="form-group flex-2">
+            <label for="db-type">Database Engine</label>
+            <select id="db-type" class="form-select">
+              <option value="mssql">Microsoft SQL Server</option>
+              <option value="postgres">PostgreSQL</option>
+              <option value="mysql">MySQL</option>
+            </select>
+          </div>
+          <div class="form-group flex-1">
+            <label for="db-rows-limit">Default Rows Limit</label>
+            <input type="number" id="db-rows-limit" min="1" placeholder="10" value="10">
+          </div>
         </div>
         <div class="form-row">
           <div class="form-group flex-2">
@@ -325,21 +331,22 @@
           <label for="db-name">Database Name</label>
           <input type="text" id="db-name" placeholder="e.g. master, production_db" required>
         </div>
-        <div class="form-group">
-          <label for="db-user">Username</label>
-          <input type="text" id="db-user" placeholder="e.g. sa, postgres">
+        <div class="form-row">
+          <div class="form-group flex-1">
+            <label for="db-user">Username</label>
+            <input type="text" id="db-user" placeholder="e.g. sa, postgres">
+          </div>
+          <div class="form-group flex-1">
+            <label for="db-password">Password</label>
+            <input type="password" id="db-password" placeholder="••••••••">
+          </div>
         </div>
         <div class="form-group">
-          <label for="db-password">Password</label>
-          <input type="password" id="db-password" placeholder="••••••••">
-        </div>
-        <div class="form-group">
-          <label for="queries-path">Queries Folder Path</label>
-          <input type="text" id="queries-path" placeholder="e.g. queries/dev or C:\MyQueries (Leave empty for default)">
-        </div>
-        <div class="form-group">
-          <label for="db-rows-limit">Default Rows Limit</label>
-          <input type="number" id="db-rows-limit" min="1" placeholder="10" value="10">
+          <label for="queries-path">Queries Folder Path (Absolute path recommended)</label>
+          <div class="input-group">
+            <input type="text" id="queries-path" placeholder="e.g. C:\MyQueries or D:\SQLQueries" required>
+            <button type="button" id="btn-browse-queries" class="btn btn-secondary btn-browse" title="Browse for a folder on your computer">Browse...</button>
+          </div>
         </div>
         <div class="modal-actions">
           <button type="button" id="btn-test-connection" class="btn btn-secondary">Test Connection</button>

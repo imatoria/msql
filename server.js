@@ -473,6 +473,35 @@ app.delete('/api/config/:id', (req, res) => {
   }
 });
 
+// API: Open native folder browser and return selected path
+app.get('/api/select-folder', (req, res) => {
+  const { exec } = require('child_process');
+  
+  // PowerShell command to open a Windows Forms FolderBrowserDialog using a topmost owner Form to ensure it appears in the foreground.
+  // Explicitly uses -NoProfile -STA since WinForms GUI dialogs require STA mode to prevent hangs when spawned from Node.js child_process.
+  const psCommand = 'powershell -NoProfile -STA -Command "Add-Type -AssemblyName System.Windows.Forms; $f = New-Object System.Windows.Forms.Form; $f.TopMost = $true; $f.WindowState = \'Minimized\'; $f.ShowInTaskbar = $false; $d = New-Object System.Windows.Forms.FolderBrowserDialog; $d.Description = \'Select Queries Directory\'; $d.ShowNewFolderButton = $true; if ($d.ShowDialog($f) -eq [System.Windows.Forms.DialogResult]::OK) { Write-Output $d.SelectedPath }; $f.Dispose(); $d.Dispose();"';
+  
+  console.log('Received request for /api/select-folder');
+  exec(psCommand, { timeout: 30000 }, (err, stdout, stderr) => {
+    console.log('PowerShell execution completed.');
+    console.log('err:', err);
+    console.log('stdout:', stdout);
+    console.log('stderr:', stderr);
+    if (err) {
+      if (err.killed) {
+        console.error('Folder browser dialog timed out or was killed.');
+        return res.status(408).json({ error: 'Folder selection timed out (no response in 30 seconds)' });
+      }
+      console.error('Error running folder browser dialog:', err);
+      return res.status(500).json({ error: 'Failed to open folder browser dialog' });
+    }
+    
+    const selectedPath = stdout.trim();
+    console.log('selectedPath:', selectedPath);
+    res.json({ selectedPath });
+  });
+});
+
 // API: Switch Active Connection
 app.post('/api/config/active', (req, res) => {
   const { id } = req.body;

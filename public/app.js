@@ -106,6 +106,7 @@ const elements = {
   btnDeleteConnection: document.getElementById('btn-delete-connection'),
   connectionName: document.getElementById('connection-name'),
   queriesPath: document.getElementById('queries-path'),
+  btnBrowseQueries: document.getElementById('btn-browse-queries'),
   
   // Layout Controls
   btnToggleSidebar: document.getElementById('btn-toggle-sidebar'),
@@ -289,6 +290,26 @@ function setupEventListeners() {
         applyRowsLimitMode(limitMode);
       }
     });
+  });
+
+  elements.btnBrowseQueries.addEventListener('click', async () => {
+    try {
+      elements.btnBrowseQueries.disabled = true;
+      elements.btnBrowseQueries.textContent = 'Browsing...';
+      
+      const response = await fetch('/api/select-folder');
+      if (!response.ok) throw new Error('Failed to open folder picker');
+      
+      const data = await response.json();
+      if (data.selectedPath) {
+        elements.queriesPath.value = data.selectedPath;
+      }
+    } catch (e) {
+      showToast('Failed to open folder browser dialog', 'error');
+    } finally {
+      elements.btnBrowseQueries.disabled = false;
+      elements.btnBrowseQueries.textContent = 'Browse...';
+    }
   });
 
   window.addEventListener('beforeunload', (e) => {
