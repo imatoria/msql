@@ -9,7 +9,6 @@ mSql is a modern, beautiful local web application to store, organize, search, an
 - **Premium Glassmorphism Dark Theme**: Sleek, immersive modern developer dashboard.
 - **Dynamic Tag Filtering & Live Search**: Fast, responsive filtering of queries.
 - **SQL Editor**: Code area equipped with line numbers and standard database text editing conveniences.
-- **Mock Runner Simulation**: Simulates running your SQL statements on dynamic datasets (Users, Sales, Database Indexes) depending on your query.
 
 ## Setup & Running
 

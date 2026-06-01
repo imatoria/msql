@@ -28,46 +28,6 @@ try {
   }
 } catch (e) {}
 
-// Mock Schemas for Running Queries Simulation
-const MOCK_DATASETS = {
-  users: {
-    columns: ['user_id', 'username', 'email', 'membership_tier', 'login_count', 'last_login'],
-    rows: [
-      [101, 'alex_db_wizard', 'alex@postgres.org', 'Premium', 48, '2026-05-30 14:22:10'],
-      [104, 'samantha_data', 'sam@metrics.io', 'Enterprise', 37, '2026-05-31 09:15:44'],
-      [108, 'dev_elixir', 'elixir@code.net', 'Free', 12, '2026-05-28 18:40:02'],
-      [112, 'growth_hacker', 'growth@leadgen.com', 'Premium', 29, '2026-05-30 22:11:59'],
-      [125, 'db_admin_root', 'root@infra.co', 'Enterprise', 84, '2026-05-31 11:58:33']
-    ]
-  },
-  sales: {
-    columns: ['sales_month', 'product_category', 'total_orders', 'gross_revenue', 'average_order_value'],
-    rows: [
-      ['2026-05-01', 'Cloud Infrastructure', 142, 28400.00, 200.00],
-      ['2026-05-01', 'SaaS Subscriptions', 890, 17800.00, 20.00],
-      ['2026-04-01', 'Cloud Infrastructure', 128, 25600.00, 200.00],
-      ['2026-04-01', 'SaaS Subscriptions', 845, 16900.00, 20.00],
-      ['2026-03-01', 'Developer Tools License', 54, 13500.00, 250.00]
-    ]
-  },
-  indexes: {
-    columns: ['schema_name', 'table_name', 'index_name', 'index_scans', 'index_tuples_read', 'index_size'],
-    rows: [
-      ['public', 'orders', 'idx_orders_user_id', 4, 38, '48 MB'],
-      ['public', 'sessions', 'idx_sessions_token', 0, 0, '120 MB'],
-      ['public', 'products', 'idx_products_slug', 12, 114, '16 KB'],
-      ['public', 'order_items', 'idx_order_items_discount', 2, 8, '32 MB']
-    ]
-  },
-  generic: {
-    columns: ['id', 'status', 'description', 'updated_at'],
-    rows: [
-      [1, 'Success', 'Transaction successfully processed and settled.', '2026-06-01 12:00:00'],
-      [2, 'Pending', 'Awaiting verification from authorization gateway.', '2026-06-01 12:05:30'],
-      [3, 'Failed', 'Insufficient funds - decline code 51.', '2026-06-01 12:10:15']
-    ]
-  }
-};
 
 // DOM Elements
 const elements = {
@@ -1102,8 +1062,8 @@ async function executeActiveQuery() {
   }
   
   if (!state.dbConfigured) {
-    // Run in local mock mode
-    simulateMockQuery(cleanedSql, limit);
+    showToast('No active database connection. Please configure and select a connection profile first.', 'error');
+    renderErrorResults('No active database connection. Please configure and select a connection profile first.');
     return;
   }
   
@@ -1141,47 +1101,6 @@ async function executeActiveQuery() {
   }
 }
 
-// Fallback Mock Query Simulation
-function simulateMockQuery(sqlText, limit) {
-  setTimeout(() => {
-    if (!state.activeTabId) return;
-    const activeTab = state.tabs.find(t => t.filename === state.activeTabId);
-    if (!activeTab) return;
-    
-    const sql = sqlText.toLowerCase();
-    let dataset = MOCK_DATASETS.generic;
-    let label = 'Mock Transaction Output (Local Mode)';
-    
-    if (sql.includes('users') || sql.includes('active_users') || sql.includes('login_logs')) {
-      dataset = MOCK_DATASETS.users;
-      label = 'Mock Active Users Dataset (Local Mode)';
-    } else if (sql.includes('sales') || sql.includes('revenue') || sql.includes('orders') || sql.includes('order_items')) {
-      dataset = MOCK_DATASETS.sales;
-      label = 'Mock Sales Summary (Local Mode)';
-    } else if (sql.includes('index') || sql.includes('pg_stat') || sql.includes('pg_relation')) {
-      dataset = MOCK_DATASETS.indexes;
-      label = 'Postgres Stat Indexes Simulated (Local Mode)';
-    }
-    
-    // Slice rows only if the query is a simple select (simulating applySqlLimit behavior)
-    let finalRows = dataset.rows;
-    const cleanSql = sqlText.toLowerCase().trim();
-    const hasLimit = /\btop\b\s*\(?\s*\d+/.test(cleanSql) || /\blimit\b\s+\d+/.test(cleanSql) || /\bfetch\s+first\s+\d+/.test(cleanSql);
-    const isSimpleSelect = /^select\b/.test(cleanSql) && !/\bunion\b/.test(cleanSql) && !/\bwith\b/.test(cleanSql);
-    
-    if (limit && limit !== 'unlimited' && isSimpleSelect && !hasLimit) {
-      finalRows = dataset.rows.slice(0, limit);
-    }
-    
-    activeTab.results = {
-      columns: dataset.columns,
-      rows: finalRows,
-      metaText: label
-    };
-    
-    renderResultsGrid(dataset.columns, finalRows, label);
-  }, 400);
-}
 
 // Render dynamic results table grid
 function renderResultsGrid(columns, rows, metaText) {
@@ -1402,7 +1321,7 @@ function updateStatusIndicator(data) {
     state.dbConfigured = true;
     elements.statusDot.className = 'status-dot active';
     const typeLabel = data.active.type === 'mssql' ? 'SQL Server' : data.active.type === 'postgres' ? 'PostgreSQL' : data.active.type === 'mysql' ? 'MySQL' : 'DB';
-    elements.statusText.textContent = `Connected: ${data.active.name} (${data.active.database})`;
+    elements.statusText.textContent = `${data.active.name} (${data.active.database})`;
     elements.statusText.title = `Engine: ${typeLabel}\nServer: ${data.active.host}:${data.active.port}\nDatabase: ${data.active.database}`;
   } else {
     state.dbConfigured = false;

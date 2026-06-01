@@ -632,14 +632,6 @@ app.post('/api/config/test', async (req, res) => {
     }
   }
 
-  // If host is 'error' or 'fail', mock connection failure
-  if (host.toLowerCase().includes('error') || host.toLowerCase().includes('fail')) {
-    return res.status(500).json({
-      success: false,
-      message: `Connection failed: Could not connect to ${host}:${port || '1433'}. Verify server name and port.`
-    });
-  }
-
   try {
     const config = { type, host, port, database, username, password: finalPassword };
     const testQuery = type === 'mssql' ? 'SELECT 1 AS [test]' : 'SELECT 1 AS test';
