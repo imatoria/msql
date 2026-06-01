@@ -791,6 +791,11 @@ async function executeActiveQuery() {
   const activeTab = state.tabs.find(t => t.filename === state.activeTabId);
   if (!activeTab) return;
   
+  // Minimize the query editor if it is currently maximized so results are visible
+  if (elements.editorContainer.classList.contains('maximized')) {
+    toggleMaximizeEditor();
+  }
+  
   elements.resultsPlaceholder.classList.add('hidden');
   elements.resultsTableContainer.classList.add('hidden');
   elements.resultsErrorContainer.classList.add('hidden');
