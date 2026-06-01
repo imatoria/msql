@@ -1,0 +1,15 @@
+{
+  "activeConnectionId": "conn_1780299523447",
+  "connections": [
+    {
+      "id": "conn_1780299523447",
+      "name": "IoniapayQa",
+      "type": "mssql",
+      "host": "ioniaapi-server.database.windows.net",
+      "port": "1433",
+      "database": "IoniapayQa",
+      "username": "ioniaapi-server-admin",
+      "password": "4OGZTF6L7277IHHB$"
+    }
+  ]
+}

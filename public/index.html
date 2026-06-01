@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>mSql // Local SQL Query Repository</title>
+  <!-- Google Fonts: Inter & JetBrains Mono -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <!-- Background glow effects -->
+  <div class="glow-bg glow-bg-1"></div>
+  <div class="glow-bg glow-bg-2"></div>
+
+  <div class="app-container">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        <div class="logo-row">
+          <div class="logo">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <ellipse cx="12" cy="5" rx="9" ry="3"></ellipse>
+              <path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"></path>
+              <path d="M3 12c0 1.66 4 3 9 3s9-1.34 9-3"></path>
+            </svg>
+            <span>mSql</span>
+          </div>
+          <button id="btn-settings-toggle" class="btn-icon-only" title="Connection Settings">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="3"></circle>
+              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+            </svg>
+          </button>
+        </div>
+        <div class="db-status-bar" id="db-status-bar">
+          <span class="status-dot inactive" id="status-dot"></span>
+          <span class="status-text" id="status-text">Disconnected (Local Mode)</span>
+        </div>
+        <button id="btn-new-query" class="btn btn-primary" title="Create New SQL Query">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="12" y1="5" x2="12" y2="19"></line>
+            <line x1="5" y1="12" x2="19" y2="12"></line>
+          </svg>
+          <span>New Query</span>
+        </button>
+      </div>
+
+      <!-- Search Section -->
+      <div class="search-box">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="11" cy="11" r="8"></circle>
+          <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+        </svg>
+        <input type="text" id="search-input" placeholder="Search queries or tags...">
+      </div>
+
+      <!-- Tag Filter Panel -->
+      <div class="tag-filters-container">
+        <div class="sidebar-section-header" id="header-tags">
+          <div class="section-title">Filter by Tags</div>
+          <button id="btn-toggle-tags" class="btn-section-toggle" title="Collapse section">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="18 15 12 9 6 15"></polyline>
+            </svg>
+          </button>
+        </div>
+        <div id="tag-list" class="tag-list">
+          <!-- Dynamic tags will be loaded here -->
+        </div>
+      </div>
+
+      <!-- Query List -->
+      <div class="query-list-container">
+        <div class="sidebar-section-header" id="header-queries">
+          <div class="section-title">Saved Queries</div>
+          <button id="btn-toggle-queries" class="btn-section-toggle" title="Collapse section">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="18 15 12 9 6 15"></polyline>
+            </svg>
+          </button>
+        </div>
+        <div id="query-list" class="query-list">
+          <div class="loading-spinner"></div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main Workspace -->
+    <main class="workspace">
+      <!-- Sidebar Toggle Button -->
+      <button id="btn-toggle-sidebar" class="btn-toggle-sidebar" title="Toggle Sidebar">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="3" y1="12" x2="21" y2="12"></line>
+          <line x1="3" y1="6" x2="21" y2="6"></line>
+          <line x1="3" y1="18" x2="21" y2="18"></line>
+        </svg>
+      </button>
+      <!-- Welcome Screen (Visible when no query selected) -->
+      <section id="welcome-screen" class="welcome-screen">
+        <div class="welcome-content">
+          <div class="welcome-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+              <ellipse cx="12" cy="5" rx="9" ry="3"></ellipse>
+              <path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"></path>
+              <path d="M3 12c0 1.66 4 3 9 3s9-1.34 9-3"></path>
+              <path d="M12 12l5 5m0-5l-5 5" stroke-linecap="round"></path>
+            </svg>
+          </div>
+          <h1>Welcome to mSql</h1>
+          <p>Create, manage, and run local SQL queries. All queries are stored directly on your disk as standard `.sql` files with embedded metadata headers.</p>
+          <button id="btn-welcome-new" class="btn btn-secondary">Create a Query</button>
+        </div>
+      </section>
+
+      <!-- Active Query Workspace -->
+      <section id="editor-workspace" class="editor-workspace hidden">
+        <!-- Metadata Header -->
+        <header class="query-header">
+          <div class="meta-inputs">
+            <input type="text" id="query-title" placeholder="Query Title" class="input-title">
+            <input type="text" id="query-desc" placeholder="Add a description of this query..." class="input-desc">
+            <div class="meta-row">
+              <div class="tags-input-wrapper">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path>
+                  <line x1="7" y1="7" x2="7.01" y2="7"></line>
+                </svg>
+                <input type="text" id="query-tags" placeholder="Tags (comma separated)">
+              </div>
+              <div class="created-info">
+                <span>Created:</span> <strong id="query-created">-</strong>
+              </div>
+            </div>
+          </div>
+          <div class="header-actions">
+            <button id="btn-save" class="btn btn-success" title="Save changes (Ctrl+S)">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+                <polyline points="17 21 17 13 7 13 7 21"></polyline>
+                <polyline points="7 3 7 8 15 8"></polyline>
+              </svg>
+              <span>Save</span>
+            </button>
+            <button id="btn-delete" class="btn btn-danger" title="Delete query file">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="3 6 5 6 21 6"></polyline>
+                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+              </svg>
+              <span>Delete</span>
+            </button>
+          </div>
+        </header>
+
+        <!-- SQL Editor Panel -->
+        <div class="editor-container">
+          <div class="editor-toolbar">
+            <div class="file-name-indicator">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-file">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                <polyline points="14 2 14 8 20 8"></polyline>
+              </svg>
+              <span id="current-filename">query.sql</span>
+              <span id="unsaved-dot" class="unsaved-dot hidden" title="Unsaved changes"></span>
+            </div>
+            <div class="editor-controls">
+              <button id="btn-run" class="btn btn-run" title="Simulate running query">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <polygon points="5 3 19 12 5 21 5 3"></polygon>
+                </svg>
+                <span>Run Query</span>
+              </button>
+              <button id="btn-maximize-editor" class="btn-icon-only btn-panel-control" title="Maximize Editor">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/>
+                </svg>
+              </button>
+            </div>
+          </div>
+
+          <div class="code-editor">
+            <!-- Line numbers panel -->
+            <div id="editor-line-numbers" class="line-numbers">1</div>
+            <!-- SQL editor textarea -->
+            <textarea id="sql-textarea" spellcheck="false" autocomplete="off" placeholder="SELECT * FROM table_name;"></textarea>
+          </div>
+        </div>
+
+        <!-- Resizable Splitter Divider -->
+        <div id="editor-resizer" class="editor-resizer" title="Drag to resize height"></div>
+
+        <!-- Simulation Results Section -->
+        <div class="results-panel">
+          <div class="results-header">
+            <h3>Results</h3>
+            <div class="results-controls">
+              <span id="results-meta" class="results-meta">Ready</span>
+              <button id="btn-maximize-results" class="btn-icon-only btn-panel-control" title="Maximize Results">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/>
+                </svg>
+              </button>
+            </div>
+          </div>
+          <div class="results-body">
+            <div id="results-placeholder" class="results-placeholder">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                <line x1="9" y1="3" x2="9" y2="21"></line>
+                <line x1="15" y1="3" x2="15" y2="21"></line>
+                <line x1="3" y1="9" x2="21" y2="9"></line>
+                <line x1="3" y1="15" x2="21" y2="15"></line>
+              </svg>
+              <p>Click "Run Query" to simulate executing the query on a mock database schema.</p>
+            </div>
+            <div id="results-table-container" class="results-table-container hidden">
+              <table id="results-table">
+                <thead id="results-table-head"></thead>
+                <tbody id="results-table-body"></tbody>
+              </table>
+            </div>
+            <div id="results-error-container" class="results-error-container hidden">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="error-icon">
+                <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+                <line x1="12" y1="9" x2="12" y2="13"></line>
+                <line x1="12" y1="17" x2="12.01" y2="17"></line>
+              </svg>
+              <pre id="results-error-text"></pre>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- Status Notification toast -->
+  <div id="toast" class="toast hidden">Query saved successfully</div>
+
+  <!-- Connection Settings Modal Overlay -->
+  <div id="modal-overlay" class="modal-overlay hidden">
+    <div class="settings-modal">
+      <div class="modal-header">
+        <h2>Database Connection Settings</h2>
+        <button id="btn-modal-close" class="btn-close" title="Close settings">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+      <form id="form-connection" class="form-connection">
+        <div class="connection-select-row">
+          <div class="form-group flex-grow">
+            <label for="connection-profile-select">Saved Connections</label>
+            <select id="connection-profile-select" class="form-select">
+              <option value="new">+ Add New Connection</option>
+            </select>
+          </div>
+          <button type="button" id="btn-delete-connection" class="btn btn-danger btn-delete-conn hidden" title="Delete connection profile">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="3 6 5 6 21 6"></polyline>
+              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+            </svg>
+          </button>
+        </div>
+        <div class="form-group">
+          <label for="connection-name">Connection Name</label>
+          <input type="text" id="connection-name" placeholder="e.g. Local SQL Server" required>
+        </div>
+        <div class="form-group">
+          <label for="db-type">Database Engine</label>
+          <select id="db-type" class="form-select">
+            <option value="mssql">Microsoft SQL Server</option>
+            <option value="postgres">PostgreSQL</option>
+            <option value="mysql">MySQL</option>
+          </select>
+        </div>
+        <div class="form-row">
+          <div class="form-group flex-2">
+            <label for="db-host">Server Address (Host / IP)</label>
+            <input type="text" id="db-host" placeholder="localhost or server-name" required>
+          </div>
+          <div class="form-group flex-1">
+            <label for="db-port">Port</label>
+            <input type="number" id="db-port" placeholder="1433" required>
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="db-name">Database Name</label>
+          <input type="text" id="db-name" placeholder="e.g. master, production_db" required>
+        </div>
+        <div class="form-group">
+          <label for="db-user">Username</label>
+          <input type="text" id="db-user" placeholder="e.g. sa, postgres">
+        </div>
+        <div class="form-group">
+          <label for="db-password">Password</label>
+          <input type="password" id="db-password" placeholder="••••••••">
+        </div>
+        <div class="modal-actions">
+          <button type="button" id="btn-test-connection" class="btn btn-secondary">Test Connection</button>
+          <button type="submit" id="btn-save-connection" class="btn btn-primary">Save Settings</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
