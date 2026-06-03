@@ -475,7 +475,7 @@ function openTab(query) {
     sql: query.sql || '',
     created: query.created,
     results: null, // to preserve execution results per tab
-    resultsViewMode: 'wrap', // default view mode
+    resultsViewMode: 'nooverflow', // default view mode
     rowsLimitMode: 'config', // default rows limit mode
     
     originalTitle: query.title,
@@ -524,7 +524,7 @@ function switchTab(filename) {
 
       // Restore tab-specific query results
       if (activeTab.results) {
-        applyResultsViewMode(activeTab.resultsViewMode || 'wrap');
+        applyResultsViewMode(activeTab.resultsViewMode || 'nooverflow');
         
         if (activeTab.results.error) {
           renderErrorResults(activeTab.results.error);
@@ -532,7 +532,7 @@ function switchTab(filename) {
           renderResultsGrid(activeTab.results.columns, activeTab.results.rows, activeTab.results.metaText);
         }
       } else {
-        applyResultsViewMode('wrap');
+        applyResultsViewMode('nooverflow');
         resetResults();
       }
     }
@@ -1150,11 +1150,11 @@ function renderResultsGrid(columns, rows, metaText) {
   if (state.activeTabId) {
     const activeTab = state.tabs.find(t => t.filename === state.activeTabId);
     if (activeTab) {
-      applyResultsViewMode(activeTab.resultsViewMode || 'wrap');
+      applyResultsViewMode(activeTab.resultsViewMode || 'nooverflow');
     }
   } else {
     const activeBtn = document.querySelector('.results-view-btn.active');
-    applyResultsViewMode(activeBtn ? activeBtn.dataset.mode : 'wrap');
+    applyResultsViewMode(activeBtn ? activeBtn.dataset.mode : 'nooverflow');
   }
 }
 
