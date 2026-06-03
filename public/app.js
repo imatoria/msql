@@ -1317,6 +1317,13 @@ async function deleteConnectionProfile() {
 }
 
 function updateStatusIndicator(data) {
+  if (window.offlineMode) {
+    state.dbConfigured = true;
+    elements.statusDot.className = 'status-dot warning';
+    elements.statusText.textContent = 'Offline Demo Mode (Local Storage)';
+    elements.statusText.title = 'mSql is running entirely in your browser using local storage for query data and database simulations.';
+    return;
+  }
   if (data.exists && data.active) {
     state.dbConfigured = true;
     elements.statusDot.className = 'status-dot active';
@@ -1332,6 +1339,16 @@ function updateStatusIndicator(data) {
 }
 
 function openSettingsModal() {
+  if (window.offlineMode && elements.queriesPath) {
+    const parent = elements.queriesPath.closest('.form-group');
+    if (parent) parent.classList.add('hidden');
+    elements.queriesPath.removeAttribute('required');
+  } else if (elements.queriesPath) {
+    const parent = elements.queriesPath.closest('.form-group');
+    if (parent) parent.classList.remove('hidden');
+    elements.queriesPath.setAttribute('required', 'required');
+  }
+
   elements.modalOverlay.classList.remove('hidden');
   document.body.style.overflow = 'hidden';
 }
