@@ -390,6 +390,26 @@ window.fetch = async function(url, options) {
   const urlString = typeof url === 'string' ? url : (url && url.url ? url.url : '');
   
   if (urlString.startsWith('/api/') || urlString.includes('/api/')) {
+    const backendApiUrl = localStorage.getItem('mSql_backend_api_url') || '';
+    
+    if (backendApiUrl) {
+      window.offlineMode = false;
+      try {
+        const parsedUrl = new URL(urlString, window.location.origin);
+        const path = parsedUrl.pathname;
+        const targetUrl = backendApiUrl.replace(/\/$/, '') + path;
+        const response = await originalFetch(targetUrl, options);
+        return response;
+      } catch (error) {
+        console.warn('Failed to contact remote Backend API at ' + backendApiUrl + '. Falling back to Offline Mock mode.', error);
+        window.offlineMode = true;
+        if (typeof updateStatusIndicator === 'function') {
+          updateStatusIndicator({ exists: false, active: null });
+        }
+        return mockApiHandler(urlString, options);
+      }
+    }
+    
     if (window.offlineMode) {
       return mockApiHandler(urlString, options);
     }

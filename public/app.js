@@ -98,6 +98,7 @@ const elements = {
   connectionName: document.getElementById('connection-name'),
   queriesPath: document.getElementById('queries-path'),
   btnBrowseQueries: document.getElementById('btn-browse-queries'),
+  backendApiUrl: document.getElementById('backend-api-url'),
   
   // Layout Controls
   btnToggleSidebar: document.getElementById('btn-toggle-sidebar'),
@@ -147,6 +148,9 @@ function setupEventListeners() {
   elements.dbType.addEventListener('change', autoUpdatePort);
   elements.btnTestConnection.addEventListener('click', testConnection);
   elements.formConnection.addEventListener('submit', saveConnectionSettings);
+  if (elements.backendApiUrl) {
+    elements.backendApiUrl.addEventListener('input', toggleQueriesPathVisibility);
+  }
   
   // Layout Controls Listeners
   elements.btnToggleSidebar.addEventListener('click', toggleSidebar);
@@ -1320,8 +1324,14 @@ function updateStatusIndicator(data) {
   if (window.offlineMode) {
     state.dbConfigured = true;
     elements.statusDot.className = 'status-dot warning';
-    elements.statusText.textContent = 'Offline Demo Mode (Local Storage)';
-    elements.statusText.title = 'mSql is running entirely in your browser using local storage for query data and database simulations.';
+    const backendUrl = localStorage.getItem('mSql_backend_api_url');
+    if (backendUrl) {
+      elements.statusText.textContent = 'Offline (Backend Unreachable)';
+      elements.statusText.title = `Failed to connect to backend at ${backendUrl}. Running in local storage fallback mode.`;
+    } else {
+      elements.statusText.textContent = 'Offline Demo Mode (Local Storage)';
+      elements.statusText.title = 'mSql is running entirely in your browser using local storage for query data and database simulations.';
+    }
     return;
   }
   if (data.exists && data.active) {
@@ -1338,16 +1348,26 @@ function updateStatusIndicator(data) {
   }
 }
 
-function openSettingsModal() {
-  if (window.offlineMode && elements.queriesPath) {
-    const parent = elements.queriesPath.closest('.form-group');
+function toggleQueriesPathVisibility() {
+  if (!elements.queriesPath) return;
+  const backendUrl = (elements.backendApiUrl ? elements.backendApiUrl.value.trim() : '') || localStorage.getItem('mSql_backend_api_url') || '';
+  const isPureOffline = window.offlineMode && !backendUrl;
+  
+  const parent = elements.queriesPath.closest('.form-group');
+  if (isPureOffline) {
     if (parent) parent.classList.add('hidden');
     elements.queriesPath.removeAttribute('required');
-  } else if (elements.queriesPath) {
-    const parent = elements.queriesPath.closest('.form-group');
+  } else {
     if (parent) parent.classList.remove('hidden');
     elements.queriesPath.setAttribute('required', 'required');
   }
+}
+
+function openSettingsModal() {
+  if (elements.backendApiUrl) {
+    elements.backendApiUrl.value = localStorage.getItem('mSql_backend_api_url') || '';
+  }
+  toggleQueriesPathVisibility();
 
   elements.modalOverlay.classList.remove('hidden');
   document.body.style.overflow = 'hidden';
@@ -1422,6 +1442,18 @@ async function saveConnectionSettings(e) {
     if (!confirm('You have unsaved changes in some tabs. Saving and switching settings will discard these changes. Proceed anyway?')) {
       return;
     }
+  }
+
+  const backendApiUrlVal = elements.backendApiUrl ? elements.backendApiUrl.value.trim() : '';
+  const oldBackendApiUrl = localStorage.getItem('mSql_backend_api_url') || '';
+  localStorage.setItem('mSql_backend_api_url', backendApiUrlVal);
+  
+  if (backendApiUrlVal !== oldBackendApiUrl) {
+    showToast('Backend API URL updated. Reloading page...');
+    setTimeout(() => {
+      window.location.reload();
+    }, 1000);
+    return;
   }
 
   const selectedId = elements.connectionProfileSelect.value;
