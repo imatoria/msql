@@ -4,7 +4,7 @@ mSql is a modern, beautiful local web application to store, organize, search, an
 
 ## Key Features
 
-- **Portability**: All queries are stored as raw `.sql` files inside the `queries/` directory.
+- **Portability**: All queries are stored as raw `.sql` files in specified directory.
 - **Embedded Metadata**: Titles, descriptions, tags, and created dates are stored directly inside standard SQL comments at the very top of each file (e.g. `-- Title: ...`).
 - **Premium Glassmorphism Dark Theme**: Sleek, immersive modern developer dashboard.
 - **Dynamic Tag Filtering & Live Search**: Fast, responsive filtering of queries.

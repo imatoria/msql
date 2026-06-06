@@ -1,0 +1,80 @@
+<div style="font-family: Arial, sans-serif; color: #333; line-height: 1.6; max-width: 800px; margin: 0 auto; padding: 20px;">
+    
+    <!-- Hero Header -->
+    <h1 style="color: #4F46E5; font-size: 2.5em; border-bottom: 2px solid #E5E7EB; padding-bottom: 10px; margin-bottom: 20px;">mSql — Premium SQL Query Repository</h1>
+    
+    <p style="font-size: 1.2em; color: #4B5563;">
+        <strong>mSql</strong> is a modern, beautiful local web application designed to help developers and database administrators store, organize, search, and run SQL queries. With an offline-first architecture, all queries are kept entirely secure on your local machine.
+    </p>
+
+    <!-- Key Features Section -->
+    <h2 style="color: #1F2937; font-size: 1.8em; margin-top: 30px; border-bottom: 1px solid #E5E7EB; padding-bottom: 5px;">Key Features</h2>
+    
+    <ul style="list-style-type: square; padding-left: 20px;">
+        <li style="margin-bottom: 10px;">
+            <strong>100% Portability (Disk-First Storage):</strong> 
+            Queries are saved directly to your local file system as standard <code>.sql</code> files. No database configuration is required just to store your query files.
+        </li>
+        <li style="margin-bottom: 10px;">
+            <strong>Embedded Portable Metadata:</strong> 
+            Metadata like titles, descriptions, tags, and creation dates are stored directly inside standard SQL comments at the top of each file. If you open files in other IDEs, they remain valid SQL.
+        </li>
+        <li style="margin-bottom: 10px;">
+            <strong>Premium Developer UI:</strong> 
+            Built with a glassmorphism dark theme, smooth micro-animations, and responsive split-pane layouts for the editor and query results.
+        </li>
+        <li style="margin-bottom: 10px;">
+            <strong>Live Search &amp; Filtering:</strong> 
+            Quickly filter through hundreds of queries by tag badges or search keywords in real-time.
+        </li>
+        <li style="margin-bottom: 10px;">
+            <strong>Rich SQL Code Editor:</strong> 
+            Equipped with line numbers, code highlighting, formatting shortcuts, and full tab key support.
+        </li>
+        <li style="margin-bottom: 10px;">
+            <strong>Offline Demo Mode Fallback:</strong> 
+            If the backend server is unreachable (e.g. running statically on GitHub Pages), the app seamlessly switches to a simulated browser engine with sample data.
+        </li>
+    </ul>
+
+    <!-- Technical Specs & Security -->
+    <h2 style="color: #1F2937; font-size: 1.8em; margin-top: 30px; border-bottom: 1px solid #E5E7EB; padding-bottom: 5px;">Licensing &amp; Domain Protection</h2>
+    <p style="color: #4B5563;">
+        This item comes prepared for distribution with built-in client-side domain locking and code protection:
+    </p>
+    <ul style="list-style-type: disc; padding-left: 20px;">
+        <li style="margin-bottom: 5px;"><strong>Domain Locked:</strong> Configured out-of-the-box to run exclusively on <code>localhost</code> and <code>imatoria.github.io</code>.</li>
+        <li style="margin-bottom: 5px;"><strong>Obfuscated:</strong> Main javascript application code is fully obfuscated to secure the application lock and proprietary frontend logic.</li>
+    </ul>
+
+    <!-- How to Setup -->
+    <h2 style="color: #1F2937; font-size: 1.8em; margin-top: 30px; border-bottom: 1px solid #E5E7EB; padding-bottom: 5px;">Installation &amp; Setup</h2>
+    
+    <ol style="padding-left: 20px;">
+        <li style="margin-bottom: 8px;">Unzip the package to your preferred directory.</li>
+        <li style="margin-bottom: 8px;">Open your terminal in the directory and run: <br><code style="background-color: #F3F4F6; padding: 2px 6px; border-radius: 4px; font-family: monospace;">npm install</code></li>
+        <li style="margin-bottom: 8px;">Start the application server: <br><code style="background-color: #F3F4F6; padding: 2px 6px; border-radius: 4px; font-family: monospace;">npm start</code></li>
+        <li style="margin-bottom: 8px;">Open your browser and navigate to: <br><a href="http://localhost:3000" target="_blank" style="color: #2563EB; text-decoration: none; font-weight: bold;">http://localhost:3000</a></li>
+    </ol>
+
+    <!-- Metadata Example -->
+    <h2 style="color: #1F2937; font-size: 1.8em; margin-top: 30px; border-bottom: 1px solid #E5E7EB; padding-bottom: 5px;">Metadata Comment Structure Example</h2>
+    <pre style="background-color: #F3F4F6; padding: 15px; border-radius: 8px; font-family: monospace; border: 1px solid #E5E7EB; overflow-x: auto;">
+-- Title: Active Users Report
+-- Description: Retrieve a list of active users in the last 30 days.
+-- Tags: users, analytics
+-- Created: 2026-06-01
+
+SELECT * FROM users WHERE active = true;
+    </pre>
+
+    <!-- What is Included -->
+    <h2 style="color: #1F2937; font-size: 1.8em; margin-top: 30px; border-bottom: 1px solid #E5E7EB; padding-bottom: 5px;">What's Included in the Package?</h2>
+    <ul style="list-style-type: circle; padding-left: 20px;">
+        <li style="margin-bottom: 5px;">Complete Express.js Backend Server Source Code</li>
+        <li style="margin-bottom: 5px;">Premium HTML5, CSS3, and JavaScript Frontend Source Files</li>
+        <li style="margin-bottom: 5px;">Preconfigured Build Commands for Obfuscation</li>
+        <li style="margin-bottom: 5px;">Documentation &amp; Setup Guide</li>
+    </ul>
+
+</div>

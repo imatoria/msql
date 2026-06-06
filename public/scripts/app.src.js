@@ -1,3 +1,61 @@
+// Domain Lock Check
+(function() {
+  const allowedHosts = ['localhost', 'imatoria.github.io'];
+  //const allowedHosts = ['previews.customer.envatousercontent.com'];
+  const hostname = window.location.hostname;
+  if (!allowedHosts.includes(hostname)) {
+    // Create locked overlay
+    const overlay = document.createElement('div');
+    overlay.style.position = 'fixed';
+    overlay.style.top = '0';
+    overlay.style.left = '0';
+    overlay.style.width = '100vw';
+    overlay.style.height = '100vh';
+    overlay.style.backgroundColor = '#0b0f19'; // Deep slate dark
+    overlay.style.color = '#f8fafc';
+    overlay.style.display = 'flex';
+    overlay.style.flexDirection = 'column';
+    overlay.style.justifyContent = 'center';
+    overlay.style.alignItems = 'center';
+    overlay.style.zIndex = '999999';
+    overlay.style.fontFamily = 'system-ui, -apple-system, sans-serif';
+    overlay.style.textAlign = 'center';
+    overlay.style.padding = '2rem';
+    overlay.style.boxSizing = 'border-box';
+
+    // Premium styling with glassmorphism container
+    overlay.innerHTML = `
+      <div style="background: rgba(30, 41, 59, 0.4); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 16px; padding: 3rem; max-width: 480px; width: 100%; box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.5); backdrop-filter: blur(12px);">
+        <div style="background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.2); width: 64px; height: 64px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 1.5rem auto;">
+          <svg style="width: 32px; height: 32px; color: #ef4444;" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+            <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+          </svg>
+        </div>
+        <h2 style="font-size: 1.5rem; font-weight: 700; margin-bottom: 0.75rem; color: #f8fafc; letter-spacing: -0.025em;">License Domain Lock</h2>
+      </div>
+    `;
+
+    const applyLock = () => {
+      document.body.appendChild(overlay);
+      const children = Array.from(document.body.children);
+      children.forEach(child => {
+        if (child !== overlay) {
+          child.style.display = 'none';
+        }
+      });
+    };
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', applyLock);
+    } else {
+      applyLock();
+    }
+
+    throw new Error('Application domain lock active. Access denied.');
+  }
+})();
+
 // App State
 let state = {
   queries: [],

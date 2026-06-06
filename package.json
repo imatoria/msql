@@ -5,7 +5,8 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "dev": "node server.js"
+    "dev": "node server.js",
+    "build": "javascript-obfuscator public/scripts/app.src.js --output public/scripts/app.js --compact true --self-defending true --string-array true --string-array-threshold 0.75"
   },
   "dependencies": {
     "express": "^4.19.2",
@@ -13,5 +14,8 @@
     "mysql2": "^3.22.4",
     "pg": "^8.21.0",
     "sql-formatter": "^15.8.0"
+  },
+  "devDependencies": {
+    "javascript-obfuscator": "^5.4.3"
   }
 }
